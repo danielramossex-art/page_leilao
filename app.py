@@ -73,9 +73,11 @@ def h(value: object) -> str:
 
 
 @st.cache_data(ttl=60)
-def load_properties(city: str | None = None) -> pd.DataFrame:
+def load_properties(state: str | None = None, city: str | None = None) -> pd.DataFrame:
     with session_scope() as session:
         query = select(Property).order_by(Property.score_overall.desc(), Property.discount_percent.desc())
+        if state and state != "Todos":
+            query = query.where(Property.state == state)
         if city and city != "Todas":
             query = query.where(Property.city == city)
         props = session.execute(query).scalars().all()
@@ -117,9 +119,22 @@ def load_properties(city: str | None = None) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=60)
-def load_cities() -> list[str]:
+def load_states() -> list[str]:
     with session_scope() as session:
-        cities = session.execute(select(Property.city).where(Property.city.is_not(None)).distinct().order_by(Property.city)).scalars().all()
+        states = session.execute(select(Property.state).where(Property.state.is_not(None)).distinct().order_by(Property.state)).scalars().all()
+        preferred = ["SP", "MG", "PR", "SC"]
+        ordered = [state for state in preferred if state in states]
+        ordered.extend(state for state in states if state not in ordered)
+        return ["Todos"] + ordered
+
+
+@st.cache_data(ttl=60)
+def load_cities(state: str | None = None) -> list[str]:
+    with session_scope() as session:
+        query = select(Property.city).where(Property.city.is_not(None)).distinct().order_by(Property.city)
+        if state and state != "Todos":
+            query = query.where(Property.state == state)
+        cities = session.execute(query).scalars().all()
         return ["Todas"] + [city for city in cities if city]
 
 
@@ -662,8 +677,13 @@ def main() -> None:
 
     with st.container(border=True):
         st.markdown('<div class="search-title">Buscar leilões</div>', unsafe_allow_html=True)
-        city = st.selectbox("Cidade", load_cities(), index=0, label_visibility="visible")
-    df = load_properties(city)
+        filter_col_state, filter_col_city = st.columns([0.28, 0.72])
+        with filter_col_state:
+            state = st.selectbox("Estado", load_states(), index=0, label_visibility="visible")
+        with filter_col_city:
+            city_options = load_cities(state)
+            city = st.selectbox("Cidade", city_options, index=0, label_visibility="visible")
+    df = load_properties(state, city)
     tabs = st.tabs(["Dashboard", "Monitor", "Detalhes", "Mapa", "Top 50 Oportunidades", "Alertas", "Admin"])
     with tabs[0]:
         render_dashboard(df)
