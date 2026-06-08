@@ -17,7 +17,7 @@ from leilao_app.logging_config import configure_logging
 from leilao_app.models import Alert, ChangeHistory, CollectionError, CollectionRun, PriceHistory, Property, ScoreHistory
 from leilao_app.scheduler_worker import start_scheduler
 from leilao_app.services.apify_importer import DEFAULT_URLS, import_from_apify
-from leilao_app.services.browser_capture import capture_and_import
+from leilao_app.services.browser_capture import DEFAULT_CAPTURE_URLS, capture_and_import
 from leilao_app.services.collector import run_collection
 from leilao_app.services.importer import import_inbox, import_properties_csv
 
@@ -388,6 +388,7 @@ def render_dashboard(df: pd.DataFrame) -> None:
                   <div>
                     <div class="opportunity-title">{h(row.get('city') or 'Cidade não informada')} · {h(row.get('neighborhood') or 'Bairro não informado')}</div>
                     <div class="opportunity-sub">{h(row.get('property_type') or 'Imóvel')} · {h(row.get('bank_or_auctioneer') or 'Origem não informada')}</div>
+                    <div class="opportunity-sub">{h(row.get('address') or 'Endereço não informado')}</div>
                   </div>
                   <div class="opportunity-value"><span>Lance inicial</span><strong>{money(row.get('minimum_value'))}</strong></div>
                   <div class="opportunity-value"><span>Score</span><strong>{score:.1f}/100</strong></div>
@@ -570,6 +571,7 @@ def render_ranking(df: pd.DataFrame) -> None:
                 "id",
                 "city",
                 "neighborhood",
+                "address",
                 "bank_or_auctioneer",
                 "minimum_value",
                 "discount_percent",
@@ -650,8 +652,8 @@ def render_admin() -> None:
     st.caption("Abre a URL no Chrome, salva o HTML em data/inbox e importa os imóveis encontrados.")
     browser_urls = st.text_area(
         "URLs para captura por navegador",
-        value="https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp",
-        height=80,
+        value="\n".join(DEFAULT_CAPTURE_URLS),
+        height=180,
     )
     if st.button("Capturar páginas e importar", use_container_width=True):
         try:

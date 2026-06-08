@@ -85,6 +85,32 @@ def _parse_leilaoimovel_html(file_obj) -> pd.DataFrame:
     if isinstance(html, bytes):
         html = html.decode("utf-8", errors="ignore")
     soup = BeautifulSoup(html, "lxml")
+    info_by_code: dict[str, dict[str, str]] = {}
+    for img in soup.select("img"):
+        src = img.get("src") or img.get("data-src")
+        alt = img.get("alt") or ""
+        if not src or "image.leilaoimovel.com.br/images/" not in src:
+            continue
+        if src.startswith("//"):
+            src = "https:" + src
+        elif src.startswith("/"):
+            src = "https://www.leilaoimovel.com.br" + src
+        codes = set(re.findall(r"im[oó]vel[-\s]*(\d+)|Im[oó]vel\s+(\d+)", f"{src} {alt}", flags=re.IGNORECASE))
+        for group in codes:
+            code = next((part for part in group if part), None)
+            if code:
+                info = info_by_code.setdefault(code, {})
+                info.setdefault("image", src)
+                alt_match = re.search(
+                    r"\['(?P<address>[^']+)'\]\s+\['(?P<neighborhood>[^']*)'\]\s+-\s+\['(?P<city>[^']+)'\]/\['(?P<state>SP|MG|PR|SC)'\]",
+                    alt,
+                    flags=re.IGNORECASE,
+                )
+                if alt_match:
+                    info.setdefault("address", alt_match.group("address"))
+                    info.setdefault("neighborhood", alt_match.group("neighborhood"))
+                    info.setdefault("city", alt_match.group("city"))
+                    info.setdefault("state", alt_match.group("state").upper())
     links = {a.get_text(" ", strip=True): a.get("href") for a in soup.select("a[href]")}
     text = soup.get_text("\n")
     city_match = re.search(r"Cidade:\s*([A-Za-zÀ-ÿ\s]+)\((SP|MG|PR|SC)\)", text)
@@ -103,8 +129,9 @@ def _parse_leilaoimovel_html(file_obj) -> pd.DataFrame:
     for match in pattern.finditer(text):
         block = re.sub(r"\s+", " ", match.group(0)).strip()
         code = match.group("code")
-        city = match.group("city").strip() or default_city
-        state = match.group("state").strip() or default_state
+        info = info_by_code.get(code, {})
+        city = info.get("city") or match.group("city").strip() or default_city
+        state = info.get("state") or match.group("state").strip() or default_state
         money_values = _parse_money_values(block)
         discount_match = re.search(r"(\d{1,3})\s*%", block)
         discount = parse_percent(discount_match.group(1)) if discount_match else None
@@ -119,7 +146,7 @@ def _parse_leilaoimovel_html(file_obj) -> pd.DataFrame:
 
         minimum = money_values[0] if money_values else None
         appraisal = money_values[1] if len(money_values) > 1 else None
-        address = re.sub(r"^.*?-\s*" + re.escape(code), "", block).strip()
+        address = info.get("address") or re.sub(r"^.*?-\s*" + re.escape(code), "", block).strip()
         address = re.split(r"1ª Praça:|2ª Praça:|Data de encerramento:", address)[0].strip(" -")
 
         rows.append(
@@ -130,7 +157,7 @@ def _parse_leilaoimovel_html(file_obj) -> pd.DataFrame:
                 "source_url": source_url,
                 "state": state,
                 "city": city,
-                "neighborhood": None,
+                "neighborhood": info.get("neighborhood") or None,
                 "address": address[:500] if address else None,
                 "property_type": type_,
                 "appraisal_value": appraisal,
@@ -144,7 +171,7 @@ def _parse_leilaoimovel_html(file_obj) -> pd.DataFrame:
                 "has_debts": debts,
                 "debt_value": debt_value,
                 "debt_information_source": debt_source,
-                "images": "",
+                "images": info.get("image", ""),
             }
         )
     return pd.DataFrame(rows)

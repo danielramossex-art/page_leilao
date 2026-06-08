@@ -6,7 +6,7 @@ import json
 from .db import init_db
 from .logging_config import configure_logging
 from .services.apify_importer import DEFAULT_URLS, import_from_apify
-from .services.browser_capture import capture_and_import
+from .services.browser_capture import DEFAULT_CAPTURE_URLS, capture_and_import
 from .services.collector import run_collection
 from .services.importer import import_inbox, import_properties_csv
 
@@ -41,9 +41,7 @@ def main() -> None:
         result = import_from_apify(args.url or DEFAULT_URLS, args.max_items)
         print(json.dumps(result, ensure_ascii=False, indent=2))
     elif args.command == "capture-url":
-        if not args.url:
-            raise SystemExit("Informe uma ou mais URLs com --url")
-        result = capture_and_import(args.url, headless=args.headless)
+        result = capture_and_import(args.url or DEFAULT_CAPTURE_URLS, headless=args.headless)
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

@@ -14,6 +14,25 @@ from ..config import INBOX_DIR
 from .importer import import_inbox
 
 
+DEFAULT_CAPTURE_URLS = [
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/sp",
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/mg",
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/pr",
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/sc",
+    "https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp",
+    "https://www.leilaoimovel.com.br/leilao-de-imovel/salto-sp",
+    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/sp",
+    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/mg",
+    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/pr",
+    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/sc",
+    "https://www.biasi.com.br/",
+    "https://venda-imoveis.caixa.gov.br/sistema/busca-imovel.asp?sltTipoBusca=imoveis",
+    "https://www.santanderimoveis.com.br/",
+    "https://www.itau.com.br/imoveis-itau",
+    "https://www.bradescoimoveis.com.br/",
+]
+
+
 def _safe_name(url: str) -> str:
     name = re.sub(r"^https?://", "", url)
     name = re.sub(r"[^A-Za-z0-9_-]+", "_", name).strip("_")
