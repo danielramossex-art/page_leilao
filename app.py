@@ -20,6 +20,7 @@ from leilao_app.services.apify_importer import DEFAULT_URLS, import_from_apify
 from leilao_app.services.browser_capture import DEFAULT_CAPTURE_URLS, capture_and_import
 from leilao_app.services.collector import run_collection
 from leilao_app.services.importer import import_inbox, import_properties_csv
+from leilao_app.sources import SOURCE_CATALOG, TARGET_STATES, get_capture_urls
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -78,7 +79,10 @@ def h(value: object) -> str:
 @st.cache_data(ttl=60)
 def load_properties(state: str | None = None, city: str | None = None) -> pd.DataFrame:
     with session_scope() as session:
+        has_real_data = session.scalar(select(func.count(Property.id)).where(Property.source != "demo")) or 0
         query = select(Property).order_by(Property.score_overall.desc(), Property.discount_percent.desc())
+        if has_real_data:
+            query = query.where(Property.source != "demo")
         if state and state != "Todos":
             query = query.where(Property.state == state)
         if city and city != "Todas":
@@ -124,7 +128,11 @@ def load_properties(state: str | None = None, city: str | None = None) -> pd.Dat
 @st.cache_data(ttl=60)
 def load_states() -> list[str]:
     with session_scope() as session:
-        states = session.execute(select(Property.state).where(Property.state.is_not(None)).distinct().order_by(Property.state)).scalars().all()
+        has_real_data = session.scalar(select(func.count(Property.id)).where(Property.source != "demo")) or 0
+        query = select(Property.state).where(Property.state.is_not(None)).distinct().order_by(Property.state)
+        if has_real_data:
+            query = query.where(Property.source != "demo")
+        states = session.execute(query).scalars().all()
         preferred = ["SP", "MG", "PR", "SC"]
         ordered = [state for state in preferred if state in states]
         ordered.extend(state for state in states if state not in ordered)
@@ -134,7 +142,10 @@ def load_states() -> list[str]:
 @st.cache_data(ttl=60)
 def load_cities(state: str | None = None) -> list[str]:
     with session_scope() as session:
+        has_real_data = session.scalar(select(func.count(Property.id)).where(Property.source != "demo")) or 0
         query = select(Property.city).where(Property.city.is_not(None)).distinct().order_by(Property.city)
+        if has_real_data:
+            query = query.where(Property.source != "demo")
         if state and state != "Todos":
             query = query.where(Property.state == state)
         cities = session.execute(query).scalars().all()
@@ -650,9 +661,16 @@ def render_admin() -> None:
 
     st.write("**Capturar página aberta no navegador**")
     st.caption("Abre a URL no Chrome, salva o HTML em data/inbox e importa os imóveis encontrados.")
+    capture_states = st.multiselect("Estados para captura", list(TARGET_STATES), default=list(TARGET_STATES))
+    capture_categories = st.multiselect(
+        "Tipos de fonte",
+        sorted({source.category for source in SOURCE_CATALOG}),
+        default=["agregador", "banco", "cidade", "leiloeiro"],
+    )
+    selected_capture_urls = get_capture_urls(capture_states, capture_categories) or DEFAULT_CAPTURE_URLS
     browser_urls = st.text_area(
         "URLs para captura por navegador",
-        value="\n".join(DEFAULT_CAPTURE_URLS),
+        value="\n".join(selected_capture_urls),
         height=180,
     )
     if st.button("Capturar páginas e importar", use_container_width=True):

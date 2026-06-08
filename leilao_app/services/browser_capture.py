@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import time
+import logging
 from pathlib import Path
 
 from selenium import webdriver
@@ -16,6 +17,7 @@ from .importer import import_inbox
 
 
 DEFAULT_CAPTURE_URLS = CAPTURE_SOURCE_URLS
+logger = logging.getLogger(__name__)
 
 
 def _safe_name(url: str) -> str:
@@ -54,9 +56,15 @@ def capture_url_to_inbox(url: str, wait_seconds: int = 60, headless: bool = Fals
 
 def capture_and_import(urls: list[str], wait_seconds: int = 60, headless: bool = False) -> dict[str, int]:
     captured = 0
+    capture_failed = 0
     for url in urls:
-        capture_url_to_inbox(url, wait_seconds=wait_seconds, headless=headless)
-        captured += 1
+        try:
+            capture_url_to_inbox(url, wait_seconds=wait_seconds, headless=headless)
+            captured += 1
+        except Exception as exc:
+            logger.warning("capture_failed url=%s error=%s", url, exc)
+            capture_failed += 1
     result = import_inbox()
     result["captured"] = captured
+    result["capture_failed"] = capture_failed
     return result
