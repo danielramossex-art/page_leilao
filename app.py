@@ -18,7 +18,7 @@ from leilao_app.models import Alert, ChangeHistory, CollectionError, CollectionR
 from leilao_app.scheduler_worker import start_scheduler
 from leilao_app.services.apify_importer import DEFAULT_URLS, import_from_apify
 from leilao_app.services.collector import run_collection
-from leilao_app.services.importer import import_properties_csv
+from leilao_app.services.importer import import_inbox, import_properties_csv
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -600,6 +600,14 @@ def render_alerts() -> None:
 
 
 def render_admin() -> None:
+    st.write("**Importação automática por pasta**")
+    st.caption("Coloque arquivos .csv, .xlsx ou .html em data/inbox. O sistema importa, pontua e move para data/processed automaticamente.")
+    if st.button("Importar pasta inbox agora", use_container_width=True):
+        result = import_inbox()
+        st.cache_data.clear()
+        st.success(f"Inbox processado: {result['files']} arquivo(s), {result['saved']} imóvel(is) salvos, {result['failed']} falha(s).")
+        st.rerun()
+
     st.write("**Importação CSV**")
     st.caption("Use este bloco para alimentar a aplicação quando as fontes públicas bloquearem coleta automatizada.")
     sample_path = BASE_DIR / "samples" / "imoveis_importacao.csv"
@@ -639,7 +647,11 @@ def render_admin() -> None:
 
 
 def run_full_collection() -> dict[str, int]:
+    inbox_result = import_inbox()
     result = run_collection()
+    result["items_found"] += inbox_result["files"]
+    result["items_saved"] += inbox_result["saved"]
+    result["errors"] += inbox_result["failed"]
     if os.getenv("APIFY_TOKEN"):
         apify_result = import_from_apify(DEFAULT_URLS)
         result["items_found"] += apify_result["rows"]

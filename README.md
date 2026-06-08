@@ -83,7 +83,28 @@ Algumas fontes usam CAPTCHA ou proteção anti-bot. Nesses casos, a aplicação 
 
 Modelo de arquivo: `samples/imoveis_importacao.csv`.
 
+## Automação sem token: pasta monitorada
+
 Na aplicação, abra a aba `Admin`, selecione o CSV em `Importar imóveis por CSV` e clique em `Importar CSV`.
+
+Para um fluxo automático sem Apify, salve ou baixe arquivos em:
+
+```text
+data/inbox
+```
+
+Formatos aceitos:
+
+- `.csv`
+- `.xlsx`
+- `.xls`
+- `.html`
+
+O sistema lê a pasta no botão `Coletar agora`, no scheduler de 1 hora e pelo comando abaixo. Arquivos importados vão para `data/processed`; arquivos com erro vão para `data/failed`.
+
+```powershell
+python -m leilao_app.cli import-inbox
+```
 
 Também é possível importar pelo terminal:
 

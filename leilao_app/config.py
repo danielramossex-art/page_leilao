@@ -11,12 +11,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 CACHE_DIR = DATA_DIR / "cache"
 LOG_DIR = DATA_DIR / "logs"
+INBOX_DIR = DATA_DIR / "inbox"
+PROCESSED_DIR = DATA_DIR / "processed"
+FAILED_DIR = DATA_DIR / "failed"
 
 
 def ensure_dirs() -> None:
     DATA_DIR.mkdir(exist_ok=True)
     CACHE_DIR.mkdir(exist_ok=True)
     LOG_DIR.mkdir(exist_ok=True)
+    INBOX_DIR.mkdir(exist_ok=True)
+    PROCESSED_DIR.mkdir(exist_ok=True)
+    FAILED_DIR.mkdir(exist_ok=True)
 
 
 @dataclass(frozen=True)

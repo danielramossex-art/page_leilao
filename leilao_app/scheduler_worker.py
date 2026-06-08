@@ -11,11 +11,13 @@ from .db import init_db
 from .logging_config import configure_logging
 from .services.collector import run_collection
 from .services.apify_importer import DEFAULT_URLS, import_from_apify
+from .services.importer import import_inbox
 
 logger = logging.getLogger(__name__)
 
 
 def run_scheduled_collection() -> None:
+    import_inbox()
     run_collection()
     if os.getenv("APIFY_TOKEN"):
         import_from_apify(DEFAULT_URLS)

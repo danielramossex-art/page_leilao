@@ -21,7 +21,9 @@ DEFAULT_URLS = [
 
 def _env(name: str, default: str | None = None) -> str | None:
     value = os.getenv(name)
-    return value if value not in (None, "") else default
+    if value in (None, "") or str(value).startswith("COLE_"):
+        return default
+    return value
 
 
 def _first(data: dict[str, Any], keys: list[str]) -> Any:

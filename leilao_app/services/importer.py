@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import shutil
+from pathlib import Path
+
 import pandas as pd
 
+from ..config import FAILED_DIR, INBOX_DIR, PROCESSED_DIR
 from ..db import init_db, session_scope
 from ..utils import calculate_discount, infer_debts, infer_modality, make_fingerprint, normalize_text, parse_area, parse_date, parse_money, parse_percent
 from .collector import upsert_property
@@ -74,9 +78,20 @@ def _clean_value(value):
     return value
 
 
-def import_properties_csv(file_obj, default_source: str = "importacao") -> dict[str, int]:
+def _read_dataframe(file_obj, suffix: str | None = None) -> pd.DataFrame:
+    suffix = (suffix or "").lower()
+    if suffix in {".xlsx", ".xls"}:
+        return pd.read_excel(file_obj)
+    if suffix in {".html", ".htm"}:
+        tables = pd.read_html(file_obj)
+        if not tables:
+            return pd.DataFrame()
+        return max(tables, key=len)
+    return pd.read_csv(file_obj, sep=None, engine="python")
+
+
+def import_properties_dataframe(df: pd.DataFrame, default_source: str = "importacao") -> dict[str, int]:
     init_db()
-    df = pd.read_csv(file_obj, sep=None, engine="python")
     df = df.rename(columns={column: _canonical_column(column) for column in df.columns})
     saved = 0
 
@@ -124,3 +139,36 @@ def import_properties_csv(file_obj, default_source: str = "importacao") -> dict[
             upsert_property(session, item)
             saved += 1
     return {"rows": len(df), "saved": saved}
+
+
+def import_properties_csv(file_obj, default_source: str = "importacao") -> dict[str, int]:
+    return import_properties_dataframe(_read_dataframe(file_obj, ".csv"), default_source)
+
+
+def import_properties_file(path: str | Path, default_source: str = "importacao") -> dict[str, int]:
+    path = Path(path)
+    with path.open("rb") as file_obj:
+        df = _read_dataframe(file_obj, path.suffix)
+    return import_properties_dataframe(df, default_source)
+
+
+def import_inbox() -> dict[str, int]:
+    init_db()
+    supported = {".csv", ".tsv", ".xlsx", ".xls", ".html", ".htm"}
+    files = [path for path in sorted(INBOX_DIR.iterdir()) if path.is_file() and path.suffix.lower() in supported]
+    result = {"files": len(files), "saved": 0, "failed": 0}
+    for path in files:
+        try:
+            imported = import_properties_file(path, default_source=f"inbox_{path.stem}")
+            result["saved"] += imported["saved"]
+            destination = PROCESSED_DIR / path.name
+            if destination.exists():
+                destination = PROCESSED_DIR / f"{path.stem}_{pd.Timestamp.utcnow().strftime('%Y%m%d%H%M%S')}{path.suffix}"
+            shutil.move(str(path), str(destination))
+        except Exception:
+            result["failed"] += 1
+            destination = FAILED_DIR / path.name
+            if destination.exists():
+                destination = FAILED_DIR / f"{path.stem}_{pd.Timestamp.utcnow().strftime('%Y%m%d%H%M%S')}{path.suffix}"
+            shutil.move(str(path), str(destination))
+    return result

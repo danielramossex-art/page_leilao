@@ -8,3 +8,6 @@ data/*.db
 data/*.sqlite
 data/cache/
 data/logs/
+data/inbox/
+data/processed/
+data/failed/
