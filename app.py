@@ -156,11 +156,12 @@ def inject_css() -> None:
     st.markdown(
         """
         <style>
-        .main .block-container {padding-top: 1.1rem; max-width: 1360px;}
+        header[data-testid="stHeader"] {height: 0; min-height: 0; visibility: hidden;}
+        .main .block-container {padding-top: 2.2rem; max-width: 1360px;}
         * {box-sizing: border-box;}
-        .app-topbar {background:#0a3d62; color:#fff; border-radius: 8px; padding: 16px 20px; margin-bottom: 14px; width:100%;}
-        .app-topbar strong {display:block; font-size: 22px; line-height:1.2;}
-        .app-topbar span {display:block; color:#dbeafe; font-size: 13px; line-height:1.35; margin-top: 5px; overflow-wrap:anywhere;}
+        .app-topbar {display:block; background:#0a3d62; color:#fff; border-radius: 8px; padding: 20px 22px; margin: 0 0 18px; width:100%; min-height: 78px; overflow: visible;}
+        .app-topbar strong {display:block; font-size: 24px; line-height:1.25; min-height: 30px; margin:0; padding:0;}
+        .app-topbar span {display:block; color:#dbeafe; font-size: 13px; line-height:1.4; margin-top: 6px; overflow-wrap:anywhere;}
         .search-panel {border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:16px; margin: 4px 0 18px;}
         .search-title {font-size:16px; font-weight:800; color:#111827; margin: 0 0 10px;}
         .listing-toolbar {display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 10px 0 14px;}
@@ -220,6 +221,9 @@ def inject_css() -> None:
             .auction-card img {border-radius: 8px 0 0 0;}
         }
         @media (max-width: 760px) {
+            .main .block-container {padding-top: 1.6rem;}
+            .app-topbar {padding: 18px 16px; min-height: 92px;}
+            .app-topbar strong {font-size: 21px;}
             .metric-strip, .value-grid {grid-template-columns: 1fr 1fr;}
             .opportunity-row {grid-template-columns: 1fr;}
             .opportunity-thumb {width:100%; height:170px;}
