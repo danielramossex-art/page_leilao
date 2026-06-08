@@ -257,6 +257,19 @@ def render_metrics(df: pd.DataFrame) -> None:
     )
 
 
+def render_data_source_notice(df: pd.DataFrame) -> None:
+    if df.empty or "source" not in df.columns:
+        return
+    sources = sorted(str(source) for source in df["source"].dropna().unique())
+    if sources == ["demo"]:
+        st.warning(
+            "Você está vendo somente a base demonstrativa local. "
+            "Para trazer todos os imóveis reais de SP, MG, PR e SC, configure APIFY_TOKEN no .env e execute a coleta via Apify."
+        )
+        return
+    st.caption("Fontes carregadas: " + ", ".join(sources))
+
+
 def render_property_card(row: pd.Series) -> None:
     image = row.get("primary_image") or DEFAULT_IMAGE
     score = float(row.get("score_overall") or 0)
@@ -316,6 +329,7 @@ def render_property_card(row: pd.Series) -> None:
 
 def render_monitor(df: pd.DataFrame) -> None:
     render_metrics(df)
+    render_data_source_notice(df)
     st.markdown(
         f"""
         <div class="listing-toolbar">
@@ -339,6 +353,7 @@ def render_dashboard(df: pd.DataFrame) -> None:
 
     states = ["SP", "MG", "PR", "SC"]
     st.subheader("Melhores oportunidades por estado")
+    render_data_source_notice(df)
     cols = st.columns(4)
     for index, state in enumerate(states):
         state_df = df[df["state"] == state].copy()
