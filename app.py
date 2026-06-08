@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import html
 from datetime import datetime
 
 import folium
@@ -61,6 +62,10 @@ def tag_class(value: str) -> str:
     if "atenção" in plain or "com" in plain or "judicial" in plain:
         return "tag tag-alert"
     return "tag tag-neutral"
+
+
+def h(value: object) -> str:
+    return html.escape("" if value is None else str(value), quote=True)
 
 
 @st.cache_data(ttl=60)
@@ -130,7 +135,8 @@ def inject_css() -> None:
     st.markdown(
         """
         <style>
-        .main .block-container {padding-top: 1.1rem; max-width: 1280px;}
+        .main .block-container {padding-top: 1.1rem; max-width: 1360px;}
+        * {box-sizing: border-box;}
         .app-topbar {background:#0a3d62; color:#fff; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px;}
         .app-topbar strong {font-size: 20px;}
         .app-topbar span {display:block; color:#dbeafe; font-size: 13px; margin-top: 2px;}
@@ -146,36 +152,43 @@ def inject_css() -> None:
         .metric-box {border: 1px solid #d8dee6; border-radius: 8px; padding: 12px; background: #ffffff;}
         .metric-box span {display:block; color:#667085; font-size: 13px;}
         .metric-box strong {display:block; color:#1f2937; font-size: 22px; margin-top: 4px;}
-        .auction-card {display:grid; grid-template-columns: 245px minmax(0, 1fr) 255px; gap:0; border: 1px solid #d8dee6; border-radius: 8px; overflow:hidden; background:#fff; margin-bottom: 14px;}
-        .auction-card img {width:100%; height:100%; min-height:205px; object-fit: cover; display:block; background:#e8edf2;}
-        .auction-main {padding: 14px 16px; border-right:1px solid #edf0f3;}
-        .auction-kind {font-size: 13px; color:#0a3d62; font-weight:800; text-transform: uppercase; margin-bottom: 7px;}
-        .auction-location {font-size: 18px; font-weight: 800; color:#111827; margin-bottom: 5px;}
-        .auction-address {font-size: 14px; color:#475467; margin-bottom: 10px;}
-        .auction-facts {display:flex; flex-wrap:wrap; gap:10px; color:#475467; font-size:13px; margin:8px 0 10px;}
-        .auction-side {padding: 14px; background:#fafafa;}
+        .auction-card {display:grid; grid-template-columns: minmax(190px, 245px) minmax(280px, 1fr) minmax(220px, 285px); gap:0; border: 1px solid #d8dee6; border-radius: 8px; overflow:visible; background:#fff; margin-bottom: 14px;}
+        .auction-card img {width:100%; height:100%; min-height:205px; object-fit: cover; display:block; background:#e8edf2; border-radius: 8px 0 0 8px;}
+        .auction-main {min-width:0; padding: 14px 16px; border-right:1px solid #edf0f3;}
+        .auction-kind {font-size: 13px; color:#0a3d62; font-weight:800; text-transform: uppercase; margin-bottom: 7px; overflow-wrap:anywhere;}
+        .auction-location {font-size: 17px; line-height:1.25; font-weight: 800; color:#111827; margin-bottom: 6px; overflow-wrap:anywhere;}
+        .auction-address {font-size: 14px; line-height:1.35; color:#475467; margin-bottom: 10px; overflow-wrap:anywhere;}
+        .auction-main p {line-height:1.4; margin: 8px 0 0; overflow-wrap:anywhere;}
+        .auction-facts {display:flex; flex-wrap:wrap; gap:8px 10px; color:#475467; font-size:13px; margin:8px 0 10px; overflow-wrap:anywhere;}
+        .auction-side {min-width:0; padding: 14px; background:#fafafa; border-radius: 0 8px 8px 0;}
         .round-label {font-size:12px; color:#667085; font-weight:700; text-transform:uppercase;}
-        .price-main {font-size:20px; line-height:1.15; color:#111827; font-weight:850; margin:3px 0 6px;}
-        .date-line {font-size:13px; color:#475467; margin-bottom:10px;}
+        .price-main {font-size:18px; line-height:1.18; color:#111827; font-weight:850; margin:3px 0 8px; overflow-wrap:anywhere;}
+        .date-line {font-size:13px; line-height:1.35; color:#475467; margin-bottom:10px; overflow-wrap:anywhere;}
         .discount-box {display:inline-flex; align-items:center; justify-content:center; min-width:54px; border-radius:7px; background:#f58220; color:#fff; font-weight:850; padding:5px 8px; margin-bottom: 9px;}
         .score-side {display:flex; align-items:center; justify-content:space-between; gap:8px; border-top:1px solid #e5e7eb; padding-top:10px; margin-top:8px;}
-        .open-btn {display:block; text-align:center; border-radius:7px; background:#0a3d62; color:#fff !important; text-decoration:none; padding:9px 10px; font-weight:800; margin-top: 10px;}
+        .open-btn {display:block; width:100%; text-align:center; border-radius:7px; background:#0a3d62; color:#fff !important; text-decoration:none; padding:10px 8px; font-size:14px; line-height:1.2; font-weight:800; margin-top: 10px; white-space:normal; overflow-wrap:anywhere;}
         .tag-row {display:flex; flex-wrap:wrap; gap: 6px; margin: 8px 0 10px;}
-        .tag {display:inline-flex; align-items:center; border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 650;}
+        .tag {display:inline-flex; align-items:center; max-width:100%; border-radius: 999px; padding: 3px 9px; font-size: 12px; line-height:1.25; font-weight: 650; overflow-wrap:anywhere;}
         .tag-good {background:#e7f6ee; color:#126b3a;}
         .tag-alert {background:#fff3d9; color:#8a5a00;}
         .tag-neutral {background:#eef2f6; color:#475467;}
-        .score-pill {display:inline-flex; align-items:center; justify-content:center; min-width: 60px; border-radius: 8px; color:#fff; padding: 6px 10px; font-weight: 800;}
+        .score-pill {display:inline-flex; align-items:center; justify-content:center; min-width: 54px; border-radius: 8px; color:#fff; padding: 6px 9px; font-weight: 800;}
         .value-grid {display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0;}
         .value-grid div {border-top: 1px solid #edf0f3; padding-top: 8px;}
         .value-grid span {display:block; color:#667085; font-size: 12px;}
         .value-grid strong {font-size: 14px; color:#1f2937;}
-        @media (max-width: 800px) {
+        @media (max-width: 1050px) {
+            .auction-card {grid-template-columns: 220px minmax(0, 1fr);}
+            .auction-side {grid-column: 1 / -1; border-top:1px solid #edf0f3; border-radius: 0 0 8px 8px;}
+            .auction-card img {border-radius: 8px 0 0 0;}
+        }
+        @media (max-width: 760px) {
             .metric-strip, .value-grid {grid-template-columns: 1fr 1fr;}
             .auction-card {grid-template-columns: 1fr;}
-            .auction-card img {height:210px;}
+            .auction-card img {height:210px; border-radius: 8px 8px 0 0;}
             .auction-main {border-right:0; border-bottom:1px solid #edf0f3;}
             .listing-toolbar {align-items:flex-start; flex-direction:column;}
+            .price-main {font-size:17px;}
         }
         </style>
         """,
@@ -217,22 +230,22 @@ def render_property_card(row: pd.Series) -> None:
     st.markdown(
         f"""
         <div class="auction-card">
-          <img src="{image}" alt="Foto do imóvel">
+          <img src="{h(image)}" alt="Foto do imóvel">
           <div class="auction-main">
-            <div class="auction-kind">{kind}</div>
-            <div class="auction-location">{location} - {neighborhood}</div>
-            <div class="auction-address">{address}</div>
+            <div class="auction-kind">{h(kind)}</div>
+            <div class="auction-location">{h(location)} - {h(neighborhood)}</div>
+            <div class="auction-address">{h(address)}</div>
             <div class="auction-facts">
-              <span>{area_text}</span>
-              <span>{row.get('bank_or_auctioneer') or 'Origem não informada'}</span>
-              <span>{row.get('occupancy') or 'Ocupação não informada'}</span>
+              <span>{h(area_text)}</span>
+              <span>{h(row.get('bank_or_auctioneer') or 'Origem não informada')}</span>
+              <span>{h(row.get('occupancy') or 'Ocupação não informada')}</span>
             </div>
             <div class="tag-row">
-              <span class="{tag_class(row.get('neighborhood_classification'))}">{row.get('neighborhood_classification') or 'Bairro Médio'}</span>
-              <span class="{tag_class(row.get('auction_modality'))}">{row.get('auction_modality') or 'Não informado'}</span>
-              <span class="{tag_class(row.get('has_debts'))}">{row.get('has_debts') or 'Não informado'}</span>
+              <span class="{tag_class(row.get('neighborhood_classification'))}">{h(row.get('neighborhood_classification') or 'Bairro Médio')}</span>
+              <span class="{tag_class(row.get('auction_modality'))}">{h(row.get('auction_modality') or 'Não informado')}</span>
+              <span class="{tag_class(row.get('has_debts'))}">{h(row.get('has_debts') or 'Não informado')}</span>
             </div>
-            <p>{row.get('automatic_summary') or 'Parecer ainda não disponível.'}</p>
+            <p>{h(row.get('automatic_summary') or 'Parecer ainda não disponível.')}</p>
           </div>
           <div class="auction-side">
             <div class="round-label">Valor de avaliação</div>
@@ -248,7 +261,7 @@ def render_property_card(row: pd.Series) -> None:
               </div>
               <span class="score-pill" style="background:{score_color(score)}">{score:.0f}</span>
             </div>
-            <a class="open-btn" href="{row.get('source_url')}" target="_blank">Abrir anúncio original</a>
+            <a class="open-btn" href="{h(row.get('source_url'))}" target="_blank">Abrir anúncio original</a>
           </div>
         </div>
         """,
