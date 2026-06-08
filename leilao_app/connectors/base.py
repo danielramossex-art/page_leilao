@@ -27,6 +27,10 @@ from ..utils import (
 logger = logging.getLogger(__name__)
 
 
+class SourceBlockedError(RuntimeError):
+    pass
+
+
 @dataclass
 class RawProperty:
     source: str
@@ -91,6 +95,10 @@ class BaseConnector(ABC):
 
     def get_soup(self, url: str) -> BeautifulSoup:
         response = self.http.get(url)
+        final_url = getattr(response, "url", "")
+        text_head = response.text[:2000].lower()
+        if "validate.perfdrive.com" in final_url or "radware bot manager captcha" in text_head:
+            raise SourceBlockedError(f"{self.source}: fonte retornou CAPTCHA/bloqueio anti-bot para {url}")
         return BeautifulSoup(response.text, "lxml")
 
     def absolute_url(self, base_url: str, href: str | None) -> str | None:

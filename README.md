@@ -71,6 +71,14 @@ python -m leilao_app.cli collect
 python -m leilao_app.cli collect --source caixa
 ```
 
+## Importação CSV quando uma fonte bloquear scraping
+
+Algumas fontes usam CAPTCHA ou proteção anti-bot. Nesses casos, a aplicação não tenta contornar o bloqueio: ela registra a falha no Admin e você pode importar dados por CSV.
+
+Modelo de arquivo: `samples/imoveis_importacao.csv`.
+
+Na aplicação, abra a aba `Admin`, selecione o CSV em `Importar imóveis por CSV` e clique em `Importar CSV`.
+
 ## Banco de dados
 
 O padrão é SQLite em `data/leiloes.db`.

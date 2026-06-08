@@ -53,6 +53,7 @@ Data de referência deste projeto: 2026-06-08.
 ## Regras implementadas
 
 - `robots.txt` é consultado antes da requisição.
+- páginas de CAPTCHA/bloqueio anti-bot, como Radware Bot Manager, são detectadas e não são gravadas como imóveis;
 - Cache local reduz acessos repetidos.
 - Retry com backoff reduz falhas transitórias.
 - Limite por domínio evita rajadas.

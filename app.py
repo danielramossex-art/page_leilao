@@ -14,6 +14,7 @@ from leilao_app.logging_config import configure_logging
 from leilao_app.models import Alert, ChangeHistory, CollectionError, CollectionRun, PriceHistory, Property, ScoreHistory
 from leilao_app.scheduler_worker import start_scheduler
 from leilao_app.services.collector import run_collection
+from leilao_app.services.importer import import_properties_csv
 
 
 DEFAULT_IMAGE_SVG = """
@@ -84,6 +85,8 @@ def load_properties(city: str | None = None) -> pd.DataFrame:
                     "latitude": prop.latitude,
                     "longitude": prop.longitude,
                     "property_type": prop.property_type,
+                    "built_area_m2": prop.built_area_m2,
+                    "land_area_m2": prop.land_area_m2,
                     "appraisal_value": prop.appraisal_value,
                     "minimum_value": prop.minimum_value,
                     "discount_percent": prop.discount_percent,
@@ -127,17 +130,36 @@ def inject_css() -> None:
     st.markdown(
         """
         <style>
-        .main .block-container {padding-top: 1.4rem; max-width: 1320px;}
+        .main .block-container {padding-top: 1.1rem; max-width: 1280px;}
+        .app-topbar {background:#0a3d62; color:#fff; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px;}
+        .app-topbar strong {font-size: 20px;}
+        .app-topbar span {display:block; color:#dbeafe; font-size: 13px; margin-top: 2px;}
+        .search-band {border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:14px; margin:12px 0 16px;}
+        .listing-toolbar {display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 10px 0 14px;}
+        .listing-count {font-size: 18px; color:#1f2937; font-weight: 750;}
+        .listing-count span {color:#f58220;}
+        .view-toggle {display:flex; gap:8px; color:#475467; font-weight:650; font-size:14px;}
+        .view-toggle span {border:1px solid #d8dee6; border-radius:6px; padding:6px 10px; background:#fff;}
+        .view-toggle .active {background:#0a3d62; color:#fff; border-color:#0a3d62;}
         h1, h2, h3 {letter-spacing: 0;}
         .metric-strip {display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 8px 0 18px;}
         .metric-box {border: 1px solid #d8dee6; border-radius: 8px; padding: 12px; background: #ffffff;}
         .metric-box span {display:block; color:#667085; font-size: 13px;}
         .metric-box strong {display:block; color:#1f2937; font-size: 22px; margin-top: 4px;}
-        .property-card {border: 1px solid #d8dee6; border-radius: 8px; overflow:hidden; background:#fff; margin-bottom: 16px;}
-        .property-card img {width:100%; aspect-ratio: 16/9; object-fit: cover; display:block; background:#e8edf2;}
-        .property-body {padding: 14px 16px;}
-        .property-title {font-size: 18px; font-weight: 700; color:#111827; margin-bottom: 6px;}
-        .property-meta {color:#667085; font-size: 13px; margin-bottom: 10px;}
+        .auction-card {display:grid; grid-template-columns: 245px minmax(0, 1fr) 255px; gap:0; border: 1px solid #d8dee6; border-radius: 8px; overflow:hidden; background:#fff; margin-bottom: 14px;}
+        .auction-card img {width:100%; height:100%; min-height:205px; object-fit: cover; display:block; background:#e8edf2;}
+        .auction-main {padding: 14px 16px; border-right:1px solid #edf0f3;}
+        .auction-kind {font-size: 13px; color:#0a3d62; font-weight:800; text-transform: uppercase; margin-bottom: 7px;}
+        .auction-location {font-size: 18px; font-weight: 800; color:#111827; margin-bottom: 5px;}
+        .auction-address {font-size: 14px; color:#475467; margin-bottom: 10px;}
+        .auction-facts {display:flex; flex-wrap:wrap; gap:10px; color:#475467; font-size:13px; margin:8px 0 10px;}
+        .auction-side {padding: 14px; background:#fafafa;}
+        .round-label {font-size:12px; color:#667085; font-weight:700; text-transform:uppercase;}
+        .price-main {font-size:20px; line-height:1.15; color:#111827; font-weight:850; margin:3px 0 6px;}
+        .date-line {font-size:13px; color:#475467; margin-bottom:10px;}
+        .discount-box {display:inline-flex; align-items:center; justify-content:center; min-width:54px; border-radius:7px; background:#f58220; color:#fff; font-weight:850; padding:5px 8px; margin-bottom: 9px;}
+        .score-side {display:flex; align-items:center; justify-content:space-between; gap:8px; border-top:1px solid #e5e7eb; padding-top:10px; margin-top:8px;}
+        .open-btn {display:block; text-align:center; border-radius:7px; background:#0a3d62; color:#fff !important; text-decoration:none; padding:9px 10px; font-weight:800; margin-top: 10px;}
         .tag-row {display:flex; flex-wrap:wrap; gap: 6px; margin: 8px 0 10px;}
         .tag {display:inline-flex; align-items:center; border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 650;}
         .tag-good {background:#e7f6ee; color:#126b3a;}
@@ -148,10 +170,12 @@ def inject_css() -> None:
         .value-grid div {border-top: 1px solid #edf0f3; padding-top: 8px;}
         .value-grid span {display:block; color:#667085; font-size: 12px;}
         .value-grid strong {font-size: 14px; color:#1f2937;}
-        .source-link {border: 1px solid #2563eb; border-radius: 8px; padding: 10px 12px; background:#eff6ff; margin-top: 10px; word-break: break-word;}
-        .source-link a {color:#1d4ed8; font-weight: 700; text-decoration: none;}
         @media (max-width: 800px) {
             .metric-strip, .value-grid {grid-template-columns: 1fr 1fr;}
+            .auction-card {grid-template-columns: 1fr;}
+            .auction-card img {height:210px;}
+            .auction-main {border-right:0; border-bottom:1px solid #edf0f3;}
+            .listing-toolbar {align-items:flex-start; flex-direction:column;}
         }
         </style>
         """,
@@ -180,26 +204,51 @@ def render_metrics(df: pd.DataFrame) -> None:
 def render_property_card(row: pd.Series) -> None:
     image = row.get("primary_image") or DEFAULT_IMAGE
     score = float(row.get("score_overall") or 0)
+    area = row.get("built_area_m2")
+    if pd.isna(area) or area is None:
+        area = row.get("land_area_m2") if "land_area_m2" in row else None
+    area_text = "Área não informada" if pd.isna(area) or area is None else f"{float(area):.2f}m²".replace(".", ",")
+    kind = row.get("property_type") or "Imóvel"
+    location = f"{row.get('city') or 'Cidade não informada'} / {row.get('state') or '--'}"
+    neighborhood = row.get("neighborhood") or "Bairro não informado"
+    address = row.get("address") or "Endereço não informado"
+    discount = row.get("discount_percent")
+    discount_text = "Score" if pd.isna(discount) or discount is None else f"{float(discount):.0f}% off"
     st.markdown(
         f"""
-        <div class="property-card">
+        <div class="auction-card">
           <img src="{image}" alt="Foto do imóvel">
-          <div class="property-body">
-            <div class="property-title">{row.get('city') or 'Cidade não informada'} · {row.get('neighborhood') or 'Bairro não informado'}</div>
-            <div class="property-meta">{row.get('bank_or_auctioneer') or 'Origem não informada'} · Leilão: {date_fmt(row.get('auction_date'))}</div>
+          <div class="auction-main">
+            <div class="auction-kind">{kind}</div>
+            <div class="auction-location">{location} - {neighborhood}</div>
+            <div class="auction-address">{address}</div>
+            <div class="auction-facts">
+              <span>{area_text}</span>
+              <span>{row.get('bank_or_auctioneer') or 'Origem não informada'}</span>
+              <span>{row.get('occupancy') or 'Ocupação não informada'}</span>
+            </div>
             <div class="tag-row">
               <span class="{tag_class(row.get('neighborhood_classification'))}">{row.get('neighborhood_classification') or 'Bairro Médio'}</span>
               <span class="{tag_class(row.get('auction_modality'))}">{row.get('auction_modality') or 'Não informado'}</span>
               <span class="{tag_class(row.get('has_debts'))}">{row.get('has_debts') or 'Não informado'}</span>
-              <span class="score-pill" style="background:{score_color(score)}">{score:.0f}</span>
-            </div>
-            <div class="value-grid">
-              <div><span>Avaliação</span><strong>{money(row.get('appraisal_value'))}</strong></div>
-              <div><span>Lance inicial</span><strong>{money(row.get('minimum_value'))}</strong></div>
-              <div><span>Desconto</span><strong>{pct(row.get('discount_percent'))}</strong></div>
             </div>
             <p>{row.get('automatic_summary') or 'Parecer ainda não disponível.'}</p>
-            <div class="source-link">URL original: <a href="{row.get('source_url')}" target="_blank">Abrir anúncio original</a></div>
+          </div>
+          <div class="auction-side">
+            <div class="round-label">Valor de avaliação</div>
+            <div class="price-main">{money(row.get('appraisal_value'))}</div>
+            <div class="round-label">Lance inicial</div>
+            <div class="price-main">{money(row.get('minimum_value'))}</div>
+            <div class="date-line">Leilão: {date_fmt(row.get('auction_date'))}</div>
+            <div class="discount-box">{discount_text}</div>
+            <div class="score-side">
+              <div>
+                <div class="round-label">Score</div>
+                <strong>{score:.1f}/100</strong>
+              </div>
+              <span class="score-pill" style="background:{score_color(score)}">{score:.0f}</span>
+            </div>
+            <a class="open-btn" href="{row.get('source_url')}" target="_blank">Abrir anúncio original</a>
           </div>
         </div>
         """,
@@ -211,13 +260,20 @@ def render_property_card(row: pd.Series) -> None:
 
 def render_monitor(df: pd.DataFrame) -> None:
     render_metrics(df)
+    st.markdown(
+        f"""
+        <div class="listing-toolbar">
+          <div class="listing-count"><span>{len(df)}</span> resultados oportunidades encontradas</div>
+          <div class="view-toggle"><span>Mapa</span><span class="active">Lista</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     if df.empty:
         st.info("Nenhum imóvel salvo ainda. Use 'Coletar agora' no topo ou rode o worker agendado.")
         return
-    cols = st.columns(2)
-    for index, (_, row) in enumerate(df.iterrows()):
-        with cols[index % 2]:
-            render_property_card(row)
+    for _, row in df.iterrows():
+        render_property_card(row)
 
 
 def render_detail(df: pd.DataFrame) -> None:
@@ -400,6 +456,13 @@ def render_alerts() -> None:
 
 
 def render_admin() -> None:
+    st.write("**Importação CSV**")
+    uploaded = st.file_uploader("Importar imóveis por CSV", type=["csv"])
+    if uploaded is not None and st.button("Importar CSV", use_container_width=True):
+        result = import_properties_csv(uploaded)
+        st.cache_data.clear()
+        st.success(f"Importação concluída: {result['saved']} registros salvos de {result['rows']} linhas.")
+
     with session_scope() as session:
         last_run = session.execute(select(CollectionRun).order_by(CollectionRun.started_at.desc()).limit(1)).scalar_one_or_none()
         total = session.scalar(select(func.count(Property.id))) or 0
@@ -459,8 +522,15 @@ def main() -> None:
 
     top_left, top_right = st.columns([0.7, 0.3])
     with top_left:
-        st.title("Monitor de Leilões Imobiliários")
-        st.caption("SP, MG, PR e SC · Caixa · BB · Santander · Itaú · Leiloeiros oficiais")
+        st.markdown(
+            """
+            <div class="app-topbar">
+              <strong>Leilões de Imóveis</strong>
+              <span>SP, MG, PR e SC · Caixa · BB · Santander · Itaú · Leiloeiros oficiais</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     with top_right:
         if st.button("Coletar agora", use_container_width=True):
             with st.spinner("Coletando fontes públicas..."):
@@ -468,7 +538,10 @@ def main() -> None:
                 st.cache_data.clear()
                 st.success(f"Coleta concluída: {result['items_found']} encontrados, {result['items_saved']} salvos, {result['errors']} erros.")
 
+    st.markdown('<div class="search-band">', unsafe_allow_html=True)
+    st.markdown("**Buscar leilões**")
     city = st.selectbox("Cidade", load_cities(), index=0)
+    st.markdown('</div>', unsafe_allow_html=True)
     df = load_properties(city)
     tabs = st.tabs(["Monitor", "Detalhes", "Mapa", "Top 50 Oportunidades", "Alertas", "Admin"])
     with tabs[0]:
