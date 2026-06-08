@@ -6,12 +6,14 @@ import json
 from .db import init_db
 from .logging_config import configure_logging
 from .services.collector import run_collection
+from .services.importer import import_properties_csv
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Portal local de leilões imobiliários")
-    parser.add_argument("command", choices=["init-db", "collect"])
+    parser.add_argument("command", choices=["init-db", "collect", "import-csv"])
     parser.add_argument("--source", action="append", help="Fonte específica: caixa, bb, santander, itau, leiloeiros")
+    parser.add_argument("--file", help="Caminho do CSV para importação manual")
     args = parser.parse_args()
 
     configure_logging()
@@ -20,6 +22,12 @@ def main() -> None:
         print("Banco inicializado.")
     elif args.command == "collect":
         result = run_collection(args.source)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    elif args.command == "import-csv":
+        if not args.file:
+            raise SystemExit("Informe --file caminho/do/arquivo.csv")
+        with open(args.file, "rb") as file_obj:
+            result = import_properties_csv(file_obj)
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

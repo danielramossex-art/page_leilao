@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import html
 from datetime import datetime
+from pathlib import Path
 
 import folium
 import pandas as pd
@@ -16,6 +17,9 @@ from leilao_app.models import Alert, ChangeHistory, CollectionError, CollectionR
 from leilao_app.scheduler_worker import start_scheduler
 from leilao_app.services.collector import run_collection
 from leilao_app.services.importer import import_properties_csv
+
+
+BASE_DIR = Path(__file__).resolve().parent
 
 
 DEFAULT_IMAGE_SVG = """
@@ -495,11 +499,28 @@ def render_alerts() -> None:
 
 def render_admin() -> None:
     st.write("**Importação CSV**")
+    st.caption("Use este bloco para alimentar a aplicação quando as fontes públicas bloquearem coleta automatizada.")
+    sample_path = BASE_DIR / "samples" / "imoveis_importacao.csv"
+    col_a, col_b = st.columns([0.35, 0.65])
+    with col_a:
+        if st.button("Carregar exemplo local", use_container_width=True):
+            with sample_path.open("rb") as file_obj:
+                result = import_properties_csv(file_obj)
+            st.cache_data.clear()
+            st.success(f"Exemplo carregado: {result['saved']} registro(s) salvo(s).")
+            st.rerun()
+    with col_b:
+        st.info("Para dados reais, baixe/monte um CSV no formato do arquivo de exemplo e importe abaixo.")
+
     uploaded = st.file_uploader("Importar imóveis por CSV", type=["csv"])
     if uploaded is not None and st.button("Importar CSV", use_container_width=True):
-        result = import_properties_csv(uploaded)
-        st.cache_data.clear()
-        st.success(f"Importação concluída: {result['saved']} registros salvos de {result['rows']} linhas.")
+        try:
+            result = import_properties_csv(uploaded)
+            st.cache_data.clear()
+            st.success(f"Importação concluída: {result['saved']} registros salvos de {result['rows']} linhas.")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"Falha ao importar CSV: {exc}")
 
     with session_scope() as session:
         last_run = session.execute(select(CollectionRun).order_by(CollectionRun.started_at.desc()).limit(1)).scalar_one_or_none()

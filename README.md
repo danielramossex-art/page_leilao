@@ -79,6 +79,12 @@ Modelo de arquivo: `samples/imoveis_importacao.csv`.
 
 Na aplicação, abra a aba `Admin`, selecione o CSV em `Importar imóveis por CSV` e clique em `Importar CSV`.
 
+Também é possível importar pelo terminal:
+
+```powershell
+python -m leilao_app.cli import-csv --file samples\imoveis_importacao.csv
+```
+
 ## Banco de dados
 
 O padrão é SQLite em `data/leiloes.db`.
