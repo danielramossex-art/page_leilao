@@ -58,6 +58,12 @@ streamlit run app.py
 
 Abra o endereço exibido pelo Streamlit, normalmente `http://localhost:8501`.
 
+Para fechar instâncias antigas deste projeto e iniciar sempre a versão atual em uma porta fixa:
+
+```powershell
+.\scripts\start_current.ps1 -Port 8512
+```
+
 Para rodar a coleta agendada em processo separado:
 
 ```powershell
