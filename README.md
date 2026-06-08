@@ -106,6 +106,14 @@ O sistema lê a pasta no botão `Coletar agora`, no scheduler de 1 hora e pelo c
 python -m leilao_app.cli import-inbox
 ```
 
+Para capturar automaticamente uma página pelo navegador e importar o HTML:
+
+```powershell
+python -m leilao_app.cli capture-url --url https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp
+```
+
+O navegador abre a página, salva o HTML em `data/inbox` e importa os imóveis encontrados. Se a página exigir interação humana, deixe `--headless` desligado e resolva no navegador aberto.
+
 Também é possível importar pelo terminal:
 
 ```powershell

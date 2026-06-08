@@ -17,6 +17,7 @@ from leilao_app.logging_config import configure_logging
 from leilao_app.models import Alert, ChangeHistory, CollectionError, CollectionRun, PriceHistory, Property, ScoreHistory
 from leilao_app.scheduler_worker import start_scheduler
 from leilao_app.services.apify_importer import DEFAULT_URLS, import_from_apify
+from leilao_app.services.browser_capture import capture_and_import
 from leilao_app.services.collector import run_collection
 from leilao_app.services.importer import import_inbox, import_properties_csv
 
@@ -644,6 +645,26 @@ def render_admin() -> None:
             st.rerun()
         except Exception as exc:
             st.error(f"Falha na coleta Apify: {exc}")
+
+    st.write("**Capturar página aberta no navegador**")
+    st.caption("Abre a URL no Chrome, salva o HTML em data/inbox e importa os imóveis encontrados.")
+    browser_urls = st.text_area(
+        "URLs para captura por navegador",
+        value="https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp",
+        height=80,
+    )
+    if st.button("Capturar páginas e importar", use_container_width=True):
+        try:
+            urls = [line.strip() for line in browser_urls.splitlines() if line.strip()]
+            result = capture_and_import(urls, headless=False)
+            st.cache_data.clear()
+            st.success(
+                f"Captura concluída: {result['captured']} página(s), "
+                f"{result['saved']} imóvel(is) salvos, {result['failed']} falha(s)."
+            )
+            st.rerun()
+        except Exception as exc:
+            st.error(f"Falha ao capturar/importar páginas: {exc}")
 
 
 def run_full_collection() -> dict[str, int]:

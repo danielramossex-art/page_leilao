@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import shutil
+import re
 from pathlib import Path
 
 import pandas as pd
+from bs4 import BeautifulSoup
 
 from ..config import FAILED_DIR, INBOX_DIR, PROCESSED_DIR
 from ..db import init_db, session_scope
@@ -66,6 +68,88 @@ MONEY_FIELDS = {"appraisal_value", "minimum_value", "current_bid_value", "debt_v
 AREA_FIELDS = {"built_area_m2", "land_area_m2"}
 
 
+def _parse_money_values(text: str) -> list[float]:
+    return [value for value in (parse_money(match) for match in re.findall(r"R\$\s*[\d\.\,]+", text)) if value is not None]
+
+
+def _infer_property_type_from_text(text: str) -> str | None:
+    lower = text.lower()
+    for kind in ["apartamento", "apartamentos", "casa", "terreno", "galpão", "galpao", "sobrado", "chácaras", "chácara", "loja", "imóvel urbano"]:
+        if kind in lower:
+            return kind.replace("galpao", "galpão").title()
+    return None
+
+
+def _parse_leilaoimovel_html(file_obj) -> pd.DataFrame:
+    html = file_obj.read()
+    if isinstance(html, bytes):
+        html = html.decode("utf-8", errors="ignore")
+    soup = BeautifulSoup(html, "lxml")
+    links = {a.get_text(" ", strip=True): a.get("href") for a in soup.select("a[href]")}
+    text = soup.get_text("\n")
+    city_match = re.search(r"Cidade:\s*([A-Za-zÀ-ÿ\s]+)\((SP|MG|PR|SC)\)", text)
+    default_city = city_match.group(1).strip() if city_match else None
+    default_state = city_match.group(2).strip() if city_match else None
+
+    pattern = re.compile(
+        r"(R\$\s*[\d\.\,]+(?:\s+R\$\s*[\d\.\,]+)?\s*(?:\d{1,3}%?)?\s+"
+        r".{0,90}?\s+em\s+(?:Leilão|Venda Direta|Compra Direta).*?\s+em\s+"
+        r"(?P<city>[A-Za-zÀ-ÿ\s]+)\s*/\s*(?P<state>SP|MG|PR|SC)\s*-\s*(?P<code>\d+)\s+"
+        r"(?P<rest>.*?))"
+        r"(?=(?:Data de encerramento:|R\$\s*[\d\.\,]+(?:\s+R\$\s*[\d\.\,]+)?\s*(?:\d{1,3}%?)?\s+.{0,90}?\s+em\s+(?:Leilão|Venda Direta|Compra Direta)|EFETUE LOGIN|$))",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    rows: list[dict] = []
+    for match in pattern.finditer(text):
+        block = re.sub(r"\s+", " ", match.group(0)).strip()
+        code = match.group("code")
+        city = match.group("city").strip() or default_city
+        state = match.group("state").strip() or default_state
+        money_values = _parse_money_values(block)
+        discount_match = re.search(r"(\d{1,3})\s*%", block)
+        discount = parse_percent(discount_match.group(1)) if discount_match else None
+        type_ = _infer_property_type_from_text(block)
+        auction_date_match = re.search(r"(?:Data de encerramento|1ª Praça|2ª Praça):\s*(\d{2}/\d{2}/\d{4}(?:\s+\d{2}:\d{2})?)", block)
+        modality = infer_modality(block)
+        debts, debt_value, debt_source = infer_debts(block)
+        source_url = next((href for label, href in links.items() if code in label or code in str(href)), None)
+        if source_url and source_url.startswith("/"):
+            source_url = "https://www.leilaoimovel.com.br" + source_url
+        source_url = source_url or f"https://www.leilaoimovel.com.br/leilao-de-imovel/{(city or '').lower().replace(' ', '-')}-{(state or '').lower()}"
+
+        minimum = money_values[0] if money_values else None
+        appraisal = money_values[1] if len(money_values) > 1 else None
+        address = re.sub(r"^.*?-\s*" + re.escape(code), "", block).strip()
+        address = re.split(r"1ª Praça:|2ª Praça:|Data de encerramento:", address)[0].strip(" -")
+
+        rows.append(
+            {
+                "source": "leilaoimovel_html",
+                "source_internal_id": code,
+                "bank_or_auctioneer": "Leilão Imóvel",
+                "source_url": source_url,
+                "state": state,
+                "city": city,
+                "neighborhood": None,
+                "address": address[:500] if address else None,
+                "property_type": type_,
+                "appraisal_value": appraisal,
+                "minimum_value": minimum,
+                "current_bid_value": minimum,
+                "discount_percent": discount,
+                "auction_date": parse_date(auction_date_match.group(1)) if auction_date_match else None,
+                "occupancy": "Não informado",
+                "notes": block[:2000],
+                "auction_modality": modality,
+                "has_debts": debts,
+                "debt_value": debt_value,
+                "debt_information_source": debt_source,
+                "images": "",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def _canonical_column(column: str) -> str:
     return COLUMN_ALIASES.get(column.strip().lower(), column.strip())
 
@@ -83,10 +167,18 @@ def _read_dataframe(file_obj, suffix: str | None = None) -> pd.DataFrame:
     if suffix in {".xlsx", ".xls"}:
         return pd.read_excel(file_obj)
     if suffix in {".html", ".htm"}:
-        tables = pd.read_html(file_obj)
-        if not tables:
+        position = file_obj.tell()
+        df = _parse_leilaoimovel_html(file_obj)
+        if not df.empty:
+            return df
+        file_obj.seek(position)
+        try:
+            tables = pd.read_html(file_obj)
+            if not tables:
+                return pd.DataFrame()
+            return max(tables, key=len)
+        except Exception:
             return pd.DataFrame()
-        return max(tables, key=len)
     return pd.read_csv(file_obj, sep=None, engine="python")
 
 
