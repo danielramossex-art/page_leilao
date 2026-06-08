@@ -652,7 +652,8 @@ def run_full_collection() -> dict[str, int]:
     result["items_found"] += inbox_result["files"]
     result["items_saved"] += inbox_result["saved"]
     result["errors"] += inbox_result["failed"]
-    if os.getenv("APIFY_TOKEN"):
+    apify_token = os.getenv("APIFY_TOKEN", "")
+    if apify_token and not apify_token.startswith("COLE_"):
         apify_result = import_from_apify(DEFAULT_URLS)
         result["items_found"] += apify_result["rows"]
         result["items_saved"] += apify_result["saved"]
