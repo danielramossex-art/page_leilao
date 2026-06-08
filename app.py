@@ -402,6 +402,9 @@ def render_detail(df: pd.DataFrame) -> None:
 
 
 def render_map(df: pd.DataFrame) -> None:
+    if df.empty or not {"latitude", "longitude"}.issubset(df.columns):
+        st.info("Nenhum imóvel com coordenadas geográficas ainda.")
+        return
     mapped = df.dropna(subset=["latitude", "longitude"])
     if mapped.empty:
         st.info("Nenhum imóvel com coordenadas geográficas ainda.")
@@ -428,7 +431,8 @@ def render_map(df: pd.DataFrame) -> None:
 
 
 def render_ranking(df: pd.DataFrame) -> None:
-    if df.empty:
+    required = {"score_overall", "discount_percent", "score_liquidity", "score_legal"}
+    if df.empty or not required.issubset(df.columns):
         st.info("Sem dados para ranking.")
         return
     top = df.sort_values(["score_overall", "discount_percent", "score_liquidity", "score_legal"], ascending=[False, False, False, False]).head(50)
