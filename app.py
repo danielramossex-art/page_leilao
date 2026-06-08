@@ -162,6 +162,18 @@ def inject_css() -> None:
         .metric-box {border: 1px solid #d8dee6; border-radius: 8px; padding: 12px; background: #ffffff;}
         .metric-box span {display:block; color:#667085; font-size: 13px;}
         .metric-box strong {display:block; color:#1f2937; font-size: 22px; margin-top: 4px;}
+        .state-grid {display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:12px; margin: 12px 0 18px;}
+        .state-card {border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:14px;}
+        .state-card span {display:block; color:#667085; font-size:12px; font-weight:700; text-transform:uppercase;}
+        .state-card strong {display:block; font-size:24px; color:#111827; margin-top:3px;}
+        .state-card em {display:block; color:#475467; font-size:13px; font-style:normal; margin-top:4px;}
+        .dashboard-section {margin-top:18px;}
+        .opportunity-row {display:grid; grid-template-columns: minmax(0, 1fr) 145px 120px 150px; align-items:center; gap:12px; border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:12px 14px; margin-bottom:10px;}
+        .opportunity-title {font-weight:850; color:#111827; line-height:1.25; overflow-wrap:anywhere;}
+        .opportunity-sub {color:#667085; font-size:13px; margin-top:3px; overflow-wrap:anywhere;}
+        .opportunity-value span {display:block; color:#667085; font-size:11px; font-weight:800; text-transform:uppercase;}
+        .opportunity-value strong {display:block; color:#111827; font-size:15px; line-height:1.25;}
+        .dashboard-link {display:block; text-align:center; border-radius:7px; background:#0a3d62; color:#fff !important; text-decoration:none; padding:9px 8px; font-size:13px; line-height:1.2; font-weight:800;}
         .auction-card {display:grid; grid-template-columns: minmax(190px, 245px) minmax(280px, 1fr) minmax(220px, 285px); gap:0; border: 1px solid #d8dee6; border-radius: 8px; overflow:visible; background:#fff; margin-bottom: 14px;}
         .auction-card img {width:100%; height:100%; min-height:205px; object-fit: cover; display:block; background:#e8edf2; border-radius: 8px 0 0 8px;}
         .auction-main {min-width:0; padding: 14px 16px; border-right:1px solid #edf0f3;}
@@ -188,12 +200,17 @@ def inject_css() -> None:
         .value-grid span {display:block; color:#667085; font-size: 12px;}
         .value-grid strong {font-size: 14px; color:#1f2937;}
         @media (max-width: 1050px) {
+            .state-grid {grid-template-columns: repeat(2, minmax(0, 1fr));}
+            .opportunity-row {grid-template-columns: minmax(0, 1fr) 135px 110px;}
+            .opportunity-row .dashboard-link {grid-column: 1 / -1;}
             .auction-card {grid-template-columns: 220px minmax(0, 1fr);}
             .auction-side {grid-column: 1 / -1; border-top:1px solid #edf0f3; border-radius: 0 0 8px 8px;}
             .auction-card img {border-radius: 8px 0 0 0;}
         }
         @media (max-width: 760px) {
             .metric-strip, .value-grid {grid-template-columns: 1fr 1fr;}
+            .state-grid {grid-template-columns: 1fr;}
+            .opportunity-row {grid-template-columns: 1fr;}
             .auction-card {grid-template-columns: 1fr;}
             .auction-card img {height:210px; border-radius: 8px 8px 0 0;}
             .auction-main {border-right:0; border-bottom:1px solid #edf0f3;}
@@ -297,6 +314,69 @@ def render_monitor(df: pd.DataFrame) -> None:
         return
     for _, row in df.iterrows():
         render_property_card(row)
+
+
+def render_dashboard(df: pd.DataFrame) -> None:
+    if df.empty or "state" not in df.columns:
+        render_empty_state()
+        return
+
+    states = ["SP", "MG", "PR", "SC"]
+    st.subheader("Melhores oportunidades por estado")
+    cards = []
+    for state in states:
+        state_df = df[df["state"] == state].copy()
+        if state_df.empty:
+            cards.append(
+                f"""
+                <div class="state-card">
+                  <span>{state}</span>
+                  <strong>0</strong>
+                  <em>Sem imóveis carregados</em>
+                </div>
+                """
+            )
+            continue
+        best = state_df.sort_values(["score_overall", "discount_percent"], ascending=[False, False]).iloc[0]
+        cards.append(
+            f"""
+            <div class="state-card">
+              <span>{state}</span>
+              <strong>{len(state_df)}</strong>
+              <em>Melhor: {h(best.get('city'))} · Score {float(best.get('score_overall') or 0):.1f}</em>
+            </div>
+            """
+        )
+    st.markdown('<div class="state-grid">' + "".join(cards) + "</div>", unsafe_allow_html=True)
+
+    for state in states:
+        state_df = df[df["state"] == state].copy()
+        if state_df.empty:
+            continue
+        state_df = state_df.sort_values(
+            ["score_overall", "discount_percent", "score_liquidity", "score_legal"],
+            ascending=[False, False, False, False],
+        ).head(5)
+        st.markdown(f'<div class="dashboard-section"><h3>{state}</h3></div>', unsafe_allow_html=True)
+        for _, row in state_df.iterrows():
+            score = float(row.get("score_overall") or 0)
+            st.markdown(
+                f"""
+                <div class="opportunity-row">
+                  <div>
+                    <div class="opportunity-title">{h(row.get('city') or 'Cidade não informada')} · {h(row.get('neighborhood') or 'Bairro não informado')}</div>
+                    <div class="opportunity-sub">{h(row.get('property_type') or 'Imóvel')} · {h(row.get('bank_or_auctioneer') or 'Origem não informada')}</div>
+                  </div>
+                  <div class="opportunity-value"><span>Lance inicial</span><strong>{money(row.get('minimum_value'))}</strong></div>
+                  <div class="opportunity-value"><span>Score</span><strong>{score:.1f}/100</strong></div>
+                  <a class="dashboard-link" href="{h(row.get('source_url'))}" target="_blank">Abrir anúncio</a>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("Ver detalhes internos", key=f"dash_detail_{int(row['id'])}"):
+                st.session_state["selected_property_id"] = int(row["id"])
+                st.info("Imóvel selecionado. Abra a aba Detalhes para ver dados completos.")
 
 
 def render_empty_state() -> None:
@@ -599,18 +679,20 @@ def main() -> None:
         st.markdown('<div class="search-title">Buscar leilões</div>', unsafe_allow_html=True)
         city = st.selectbox("Cidade", load_cities(), index=0, label_visibility="visible")
     df = load_properties(city)
-    tabs = st.tabs(["Monitor", "Detalhes", "Mapa", "Top 50 Oportunidades", "Alertas", "Admin"])
+    tabs = st.tabs(["Dashboard", "Monitor", "Detalhes", "Mapa", "Top 50 Oportunidades", "Alertas", "Admin"])
     with tabs[0]:
-        render_monitor(df)
+        render_dashboard(df)
     with tabs[1]:
-        render_detail(df)
+        render_monitor(df)
     with tabs[2]:
-        render_map(df)
+        render_detail(df)
     with tabs[3]:
-        render_ranking(df)
+        render_map(df)
     with tabs[4]:
-        render_alerts()
+        render_ranking(df)
     with tabs[5]:
+        render_alerts()
+    with tabs[6]:
         render_admin()
 
 
