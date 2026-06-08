@@ -141,10 +141,11 @@ def inject_css() -> None:
         <style>
         .main .block-container {padding-top: 1.1rem; max-width: 1360px;}
         * {box-sizing: border-box;}
-        .app-topbar {background:#0a3d62; color:#fff; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px;}
-        .app-topbar strong {font-size: 20px;}
-        .app-topbar span {display:block; color:#dbeafe; font-size: 13px; margin-top: 2px;}
-        .search-title {font-size:16px; font-weight:800; color:#111827; margin: 10px 0 8px;}
+        .app-topbar {background:#0a3d62; color:#fff; border-radius: 8px; padding: 16px 20px; margin-bottom: 14px; width:100%;}
+        .app-topbar strong {display:block; font-size: 22px; line-height:1.2;}
+        .app-topbar span {display:block; color:#dbeafe; font-size: 13px; line-height:1.35; margin-top: 5px; overflow-wrap:anywhere;}
+        .search-panel {border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:16px; margin: 4px 0 18px;}
+        .search-title {font-size:16px; font-weight:800; color:#111827; margin: 0 0 10px;}
         .listing-toolbar {display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 10px 0 14px;}
         .listing-count {font-size: 18px; color:#1f2937; font-weight: 750;}
         .listing-count span {color:#f58220;}
@@ -579,26 +580,24 @@ def main() -> None:
         except Exception:
             st.session_state["scheduler_started"] = False
 
-    top_left, top_right = st.columns([0.7, 0.3])
-    with top_left:
-        st.markdown(
-            """
-            <div class="app-topbar">
-              <strong>Leilões de Imóveis</strong>
-              <span>SP, MG, PR e SC · Caixa · BB · Santander · Itaú · Leiloeiros oficiais</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with top_right:
-        if st.button("Coletar agora", use_container_width=True):
-            with st.spinner("Coletando fontes públicas..."):
-                result = run_collection()
-                st.cache_data.clear()
-                st.success(f"Coleta concluída: {result['items_found']} encontrados, {result['items_saved']} salvos, {result['errors']} erros.")
+    st.markdown(
+        """
+        <div class="app-topbar">
+          <strong>Leilões de Imóveis</strong>
+          <span>SP, MG, PR e SC · Caixa · BB · Santander · Itaú · Leiloeiros oficiais</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Coletar agora", use_container_width=False):
+        with st.spinner("Coletando fontes públicas..."):
+            result = run_collection()
+            st.cache_data.clear()
+            st.success(f"Coleta concluída: {result['items_found']} encontrados, {result['items_saved']} salvos, {result['errors']} erros.")
 
-    st.markdown('<div class="search-title">Buscar leilões</div>', unsafe_allow_html=True)
-    city = st.selectbox("Cidade", load_cities(), index=0)
+    with st.container(border=True):
+        st.markdown('<div class="search-title">Buscar leilões</div>', unsafe_allow_html=True)
+        city = st.selectbox("Cidade", load_cities(), index=0, label_visibility="visible")
     df = load_properties(city)
     tabs = st.tabs(["Monitor", "Detalhes", "Mapa", "Top 50 Oportunidades", "Alertas", "Admin"])
     with tabs[0]:
