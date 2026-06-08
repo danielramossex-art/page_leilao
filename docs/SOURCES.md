@@ -47,8 +47,10 @@ Data de referência deste projeto: 2026-06-08.
 ## Leilão Imóvel via Apify
 
 - URLs iniciais:
-  - `https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp`
-  - `https://www.leilaoimovel.com.br/leilao-de-imovel/salto-sp`
+  - `https://www.leilaoimovel.com.br/leilao-de-imoveis/sp`
+  - `https://www.leilaoimovel.com.br/leilao-de-imoveis/mg`
+  - `https://www.leilaoimovel.com.br/leilao-de-imoveis/pr`
+  - `https://www.leilaoimovel.com.br/leilao-de-imoveis/sc`
 - Método: API autorizada via Apify, configurada por `APIFY_TOKEN`.
 - Motivo: o site direto bloqueia coleta local por `robots.txt`; o projeto não tenta contornar esse bloqueio.
 - Manutenção futura: média. O schema de retorno do ator Apify pode mudar e o normalizador aceita múltiplos nomes de campos.

@@ -5,14 +5,17 @@ from typing import Any
 
 import requests
 
+from ..config import get_settings
 from ..db import init_db, session_scope
 from ..utils import calculate_discount, infer_debts, infer_modality, make_fingerprint, normalize_text, parse_area, parse_date, parse_money, parse_percent
 from .collector import upsert_property
 
 
 DEFAULT_URLS = [
-    "https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp",
-    "https://www.leilaoimovel.com.br/leilao-de-imovel/salto-sp",
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/sp",
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/mg",
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/pr",
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/sc",
 ]
 
 
@@ -110,6 +113,7 @@ def normalize_apify_item(data: dict[str, Any]) -> dict[str, Any] | None:
 
 def import_from_apify(urls: list[str] | None = None, max_items: int | None = None) -> dict[str, int]:
     init_db()
+    get_settings()
     token = _env("APIFY_TOKEN")
     actor_id = _env("APIFY_LEILAOIMOVEL_ACTOR_ID", "gio21~leilaoimovel-scraper")
     max_items = max_items or int(_env("APIFY_MAX_ITEMS", "100") or "100")

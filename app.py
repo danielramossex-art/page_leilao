@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 import folium
+import os
 import pandas as pd
 import streamlit as st
 from sqlalchemy import func, select
@@ -617,6 +618,15 @@ def render_admin() -> None:
         except Exception as exc:
             st.error(f"Falha na coleta Apify: {exc}")
 
+
+def run_full_collection() -> dict[str, int]:
+    result = run_collection()
+    if os.getenv("APIFY_TOKEN"):
+        apify_result = import_from_apify(DEFAULT_URLS)
+        result["items_found"] += apify_result["rows"]
+        result["items_saved"] += apify_result["saved"]
+    return result
+
     with session_scope() as session:
         last_run = session.execute(select(CollectionRun).order_by(CollectionRun.started_at.desc()).limit(1)).scalar_one_or_none()
         total = session.scalar(select(func.count(Property.id))) or 0
@@ -685,7 +695,7 @@ def main() -> None:
     )
     if st.button("Coletar agora", use_container_width=False):
         with st.spinner("Coletando fontes públicas..."):
-            result = run_collection()
+            result = run_full_collection()
             st.cache_data.clear()
             st.success(f"Coleta concluída: {result['items_found']} encontrados, {result['items_saved']} salvos, {result['errors']} erros.")
 

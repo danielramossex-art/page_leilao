@@ -94,13 +94,13 @@ O projeto já suporta Apify para coletar páginas como Indaiatuba/SP e Salto/SP:
 ```env
 APIFY_TOKEN=seu_token
 APIFY_LEILAOIMOVEL_ACTOR_ID=gio21~leilaoimovel-scraper
-APIFY_MAX_ITEMS=100
+APIFY_MAX_ITEMS=10000
 ```
 
 Depois execute:
 
 ```powershell
-python -m leilao_app.cli collect-apify --url https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp --url https://www.leilaoimovel.com.br/leilao-de-imovel/salto-sp
+python -m leilao_app.cli collect-apify --url https://www.leilaoimovel.com.br/leilao-de-imoveis/sp --url https://www.leilaoimovel.com.br/leilao-de-imoveis/mg --url https://www.leilaoimovel.com.br/leilao-de-imoveis/pr --url https://www.leilaoimovel.com.br/leilao-de-imoveis/sc
 ```
 
 Ou use a aba `Admin > Coleta automática autorizada via API`.
