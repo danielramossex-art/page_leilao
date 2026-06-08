@@ -162,11 +162,6 @@ def inject_css() -> None:
         .metric-box {border: 1px solid #d8dee6; border-radius: 8px; padding: 12px; background: #ffffff;}
         .metric-box span {display:block; color:#667085; font-size: 13px;}
         .metric-box strong {display:block; color:#1f2937; font-size: 22px; margin-top: 4px;}
-        .state-grid {display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:12px; margin: 12px 0 18px;}
-        .state-card {border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:14px;}
-        .state-card span {display:block; color:#667085; font-size:12px; font-weight:700; text-transform:uppercase;}
-        .state-card strong {display:block; font-size:24px; color:#111827; margin-top:3px;}
-        .state-card em {display:block; color:#475467; font-size:13px; font-style:normal; margin-top:4px;}
         .dashboard-section {margin-top:18px;}
         .opportunity-row {display:grid; grid-template-columns: 96px minmax(0, 1fr) 145px 120px 150px; align-items:center; gap:12px; border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:12px 14px; margin-bottom:10px;}
         .opportunity-thumb {width:96px; height:72px; object-fit:cover; border-radius:7px; background:#e8edf2;}
@@ -201,7 +196,6 @@ def inject_css() -> None:
         .value-grid span {display:block; color:#667085; font-size: 12px;}
         .value-grid strong {font-size: 14px; color:#1f2937;}
         @media (max-width: 1050px) {
-            .state-grid {grid-template-columns: repeat(2, minmax(0, 1fr));}
             .opportunity-row {grid-template-columns: 88px minmax(0, 1fr) 135px 110px;}
             .opportunity-row .dashboard-link {grid-column: 1 / -1;}
             .auction-card {grid-template-columns: 220px minmax(0, 1fr);}
@@ -210,7 +204,6 @@ def inject_css() -> None:
         }
         @media (max-width: 760px) {
             .metric-strip, .value-grid {grid-template-columns: 1fr 1fr;}
-            .state-grid {grid-template-columns: 1fr;}
             .opportunity-row {grid-template-columns: 1fr;}
             .opportunity-thumb {width:100%; height:170px;}
             .auction-card {grid-template-columns: 1fr;}
@@ -325,31 +318,19 @@ def render_dashboard(df: pd.DataFrame) -> None:
 
     states = ["SP", "MG", "PR", "SC"]
     st.subheader("Melhores oportunidades por estado")
-    cards = []
-    for state in states:
+    cols = st.columns(4)
+    for index, state in enumerate(states):
         state_df = df[df["state"] == state].copy()
-        if state_df.empty:
-            cards.append(
-                f"""
-                <div class="state-card">
-                  <span>{state}</span>
-                  <strong>0</strong>
-                  <em>Sem imóveis carregados</em>
-                </div>
-                """
+        with cols[index]:
+            if state_df.empty:
+                st.metric(state, 0, "Sem imóveis")
+                continue
+            best = state_df.sort_values(["score_overall", "discount_percent"], ascending=[False, False]).iloc[0]
+            st.metric(
+                state,
+                len(state_df),
+                f"Melhor: {best.get('city') or 'N/I'} · Score {float(best.get('score_overall') or 0):.1f}",
             )
-            continue
-        best = state_df.sort_values(["score_overall", "discount_percent"], ascending=[False, False]).iloc[0]
-        cards.append(
-            f"""
-            <div class="state-card">
-              <span>{state}</span>
-              <strong>{len(state_df)}</strong>
-              <em>Melhor: {h(best.get('city'))} · Score {float(best.get('score_overall') or 0):.1f}</em>
-            </div>
-            """
-        )
-    st.markdown('<div class="state-grid">' + "".join(cards) + "</div>", unsafe_allow_html=True)
 
     for state in states:
         state_df = df[df["state"] == state].copy()
@@ -359,7 +340,7 @@ def render_dashboard(df: pd.DataFrame) -> None:
             ["score_overall", "discount_percent", "score_liquidity", "score_legal"],
             ascending=[False, False, False, False],
         ).head(5)
-        st.markdown(f'<div class="dashboard-section"><h3>{state}</h3></div>', unsafe_allow_html=True)
+        st.markdown(f"### {state}")
         for _, row in state_df.iterrows():
             score = float(row.get("score_overall") or 0)
             image = row.get("primary_image") or DEFAULT_IMAGE
