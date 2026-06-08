@@ -140,13 +140,18 @@ def inject_css() -> None:
         .app-topbar {background:#0a3d62; color:#fff; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px;}
         .app-topbar strong {font-size: 20px;}
         .app-topbar span {display:block; color:#dbeafe; font-size: 13px; margin-top: 2px;}
-        .search-band {border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:14px; margin:12px 0 16px;}
+        .search-title {font-size:16px; font-weight:800; color:#111827; margin: 10px 0 8px;}
         .listing-toolbar {display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 10px 0 14px;}
         .listing-count {font-size: 18px; color:#1f2937; font-weight: 750;}
         .listing-count span {color:#f58220;}
         .view-toggle {display:flex; gap:8px; color:#475467; font-weight:650; font-size:14px;}
         .view-toggle span {border:1px solid #d8dee6; border-radius:6px; padding:6px 10px; background:#fff;}
         .view-toggle .active {background:#0a3d62; color:#fff; border-color:#0a3d62;}
+        .empty-state {border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:22px; margin-top:12px;}
+        .empty-state strong {display:block; font-size:18px; color:#111827; margin-bottom:6px;}
+        .empty-state p {color:#475467; margin:0 0 12px;}
+        .empty-actions {display:flex; flex-wrap:wrap; gap:10px;}
+        .empty-actions code {background:#eef2f6; border-radius:6px; padding:7px 9px;}
         h1, h2, h3 {letter-spacing: 0;}
         .metric-strip {display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 8px 0 18px;}
         .metric-box {border: 1px solid #d8dee6; border-radius: 8px; padding: 12px; background: #ffffff;}
@@ -283,15 +288,31 @@ def render_monitor(df: pd.DataFrame) -> None:
         unsafe_allow_html=True,
     )
     if df.empty:
-        st.info("Nenhum imóvel salvo ainda. Use 'Coletar agora' no topo ou rode o worker agendado.")
+        render_empty_state()
         return
     for _, row in df.iterrows():
         render_property_card(row)
 
 
+def render_empty_state() -> None:
+    st.markdown(
+        """
+        <div class="empty-state">
+          <strong>Nenhum imóvel carregado ainda</strong>
+          <p>As fontes públicas testadas estão bloqueando coleta automatizada por robots.txt ou CAPTCHA. Para visualizar a plataforma com dados reais, importe um CSV na aba Admin.</p>
+          <div class="empty-actions">
+            <code>samples/imoveis_importacao.csv</code>
+            <code>Admin > Importar imóveis por CSV</code>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_detail(df: pd.DataFrame) -> None:
     if df.empty:
-        st.info("Nenhum imóvel disponível para detalhar.")
+        render_empty_state()
         return
     options = {f"#{int(row.id)} · {row.city or 'Sem cidade'} · {row.neighborhood or 'Sem bairro'} · Score {row.score_overall:.0f}": int(row.id) for row in df.itertuples()}
     selected = st.session_state.get("selected_property_id") or next(iter(options.values()))
@@ -433,7 +454,7 @@ def render_map(df: pd.DataFrame) -> None:
 def render_ranking(df: pd.DataFrame) -> None:
     required = {"score_overall", "discount_percent", "score_liquidity", "score_legal"}
     if df.empty or not required.issubset(df.columns):
-        st.info("Sem dados para ranking.")
+        render_empty_state()
         return
     top = df.sort_values(["score_overall", "discount_percent", "score_liquidity", "score_legal"], ascending=[False, False, False, False]).head(50)
     st.dataframe(
@@ -555,10 +576,8 @@ def main() -> None:
                 st.cache_data.clear()
                 st.success(f"Coleta concluída: {result['items_found']} encontrados, {result['items_saved']} salvos, {result['errors']} erros.")
 
-    st.markdown('<div class="search-band">', unsafe_allow_html=True)
-    st.markdown("**Buscar leilões**")
+    st.markdown('<div class="search-title">Buscar leilões</div>', unsafe_allow_html=True)
     city = st.selectbox("Cidade", load_cities(), index=0)
-    st.markdown('</div>', unsafe_allow_html=True)
     df = load_properties(city)
     tabs = st.tabs(["Monitor", "Detalhes", "Mapa", "Top 50 Oportunidades", "Alertas", "Admin"])
     with tabs[0]:
