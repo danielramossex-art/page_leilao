@@ -1,0 +1,1 @@
+from .leiloeiros import LeiloeirosConnector
