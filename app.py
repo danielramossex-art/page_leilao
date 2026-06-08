@@ -168,7 +168,8 @@ def inject_css() -> None:
         .state-card strong {display:block; font-size:24px; color:#111827; margin-top:3px;}
         .state-card em {display:block; color:#475467; font-size:13px; font-style:normal; margin-top:4px;}
         .dashboard-section {margin-top:18px;}
-        .opportunity-row {display:grid; grid-template-columns: minmax(0, 1fr) 145px 120px 150px; align-items:center; gap:12px; border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:12px 14px; margin-bottom:10px;}
+        .opportunity-row {display:grid; grid-template-columns: 96px minmax(0, 1fr) 145px 120px 150px; align-items:center; gap:12px; border:1px solid #d8dee6; border-radius:8px; background:#fff; padding:12px 14px; margin-bottom:10px;}
+        .opportunity-thumb {width:96px; height:72px; object-fit:cover; border-radius:7px; background:#e8edf2;}
         .opportunity-title {font-weight:850; color:#111827; line-height:1.25; overflow-wrap:anywhere;}
         .opportunity-sub {color:#667085; font-size:13px; margin-top:3px; overflow-wrap:anywhere;}
         .opportunity-value span {display:block; color:#667085; font-size:11px; font-weight:800; text-transform:uppercase;}
@@ -201,7 +202,7 @@ def inject_css() -> None:
         .value-grid strong {font-size: 14px; color:#1f2937;}
         @media (max-width: 1050px) {
             .state-grid {grid-template-columns: repeat(2, minmax(0, 1fr));}
-            .opportunity-row {grid-template-columns: minmax(0, 1fr) 135px 110px;}
+            .opportunity-row {grid-template-columns: 88px minmax(0, 1fr) 135px 110px;}
             .opportunity-row .dashboard-link {grid-column: 1 / -1;}
             .auction-card {grid-template-columns: 220px minmax(0, 1fr);}
             .auction-side {grid-column: 1 / -1; border-top:1px solid #edf0f3; border-radius: 0 0 8px 8px;}
@@ -211,6 +212,7 @@ def inject_css() -> None:
             .metric-strip, .value-grid {grid-template-columns: 1fr 1fr;}
             .state-grid {grid-template-columns: 1fr;}
             .opportunity-row {grid-template-columns: 1fr;}
+            .opportunity-thumb {width:100%; height:170px;}
             .auction-card {grid-template-columns: 1fr;}
             .auction-card img {height:210px; border-radius: 8px 8px 0 0;}
             .auction-main {border-right:0; border-bottom:1px solid #edf0f3;}
@@ -360,9 +362,11 @@ def render_dashboard(df: pd.DataFrame) -> None:
         st.markdown(f'<div class="dashboard-section"><h3>{state}</h3></div>', unsafe_allow_html=True)
         for _, row in state_df.iterrows():
             score = float(row.get("score_overall") or 0)
+            image = row.get("primary_image") or DEFAULT_IMAGE
             st.markdown(
                 f"""
                 <div class="opportunity-row">
+                  <img class="opportunity-thumb" src="{h(image)}" alt="Foto do imóvel">
                   <div>
                     <div class="opportunity-title">{h(row.get('city') or 'Cidade não informada')} · {h(row.get('neighborhood') or 'Bairro não informado')}</div>
                     <div class="opportunity-sub">{h(row.get('property_type') or 'Imóvel')} · {h(row.get('bank_or_auctioneer') or 'Origem não informada')}</div>
@@ -650,7 +654,7 @@ def render_admin() -> None:
 def main() -> None:
     configure_logging()
     init_db()
-    st.set_page_config(page_title="Monitor de Leilões Imobiliários", page_icon="home", layout="wide")
+    st.set_page_config(page_title="Busca Imóveis Leilão", page_icon="home", layout="wide")
     inject_css()
 
     if "scheduler_started" not in st.session_state:
@@ -663,7 +667,7 @@ def main() -> None:
     st.markdown(
         """
         <div class="app-topbar">
-          <strong>Leilões de Imóveis</strong>
+          <strong>Busca Imóveis Leilão</strong>
           <span>SP, MG, PR e SC · Caixa · BB · Santander · Itaú · Leiloeiros oficiais</span>
         </div>
         """,
