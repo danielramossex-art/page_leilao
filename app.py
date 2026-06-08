@@ -15,6 +15,7 @@ from leilao_app.db import init_db, session_scope
 from leilao_app.logging_config import configure_logging
 from leilao_app.models import Alert, ChangeHistory, CollectionError, CollectionRun, PriceHistory, Property, ScoreHistory
 from leilao_app.scheduler_worker import start_scheduler
+from leilao_app.services.apify_importer import DEFAULT_URLS, import_from_apify
 from leilao_app.services.collector import run_collection
 from leilao_app.services.importer import import_properties_csv
 
@@ -602,6 +603,19 @@ def render_admin() -> None:
             st.rerun()
         except Exception as exc:
             st.error(f"Falha ao importar CSV: {exc}")
+
+    st.write("**Coleta automática autorizada via API**")
+    st.caption("Configure APIFY_TOKEN no .env para coletar leilaoimovel.com.br sem violar robots.txt local.")
+    apify_urls = st.text_area("URLs para coleta Apify", value="\n".join(DEFAULT_URLS), height=90)
+    if st.button("Coletar via Apify", use_container_width=True):
+        try:
+            urls = [line.strip() for line in apify_urls.splitlines() if line.strip()]
+            result = import_from_apify(urls)
+            st.cache_data.clear()
+            st.success(f"Coleta Apify concluída: {result['saved']} registros salvos de {result['rows']} retornados.")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"Falha na coleta Apify: {exc}")
 
     with session_scope() as session:
         last_run = session.execute(select(CollectionRun).order_by(CollectionRun.started_at.desc()).limit(1)).scalar_one_or_none()

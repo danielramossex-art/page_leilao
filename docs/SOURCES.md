@@ -44,6 +44,15 @@ Data de referência deste projeto: 2026-06-08.
 - API pública documentada: varia por leiloeiro; não presumida.
 - Manutenção futura: alta, pois cada leiloeiro tem regras, termos, marcação e proteção próprios.
 
+## Leilão Imóvel via Apify
+
+- URLs iniciais:
+  - `https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp`
+  - `https://www.leilaoimovel.com.br/leilao-de-imovel/salto-sp`
+- Método: API autorizada via Apify, configurada por `APIFY_TOKEN`.
+- Motivo: o site direto bloqueia coleta local por `robots.txt`; o projeto não tenta contornar esse bloqueio.
+- Manutenção futura: média. O schema de retorno do ator Apify pode mudar e o normalizador aceita múltiplos nomes de campos.
+
 ## OpenStreetMap / Nominatim
 
 - Uso: geocoding de endereços quando disponível.

@@ -85,6 +85,26 @@ Também é possível importar pelo terminal:
 python -m leilao_app.cli import-csv --file samples\imoveis_importacao.csv
 ```
 
+## Coleta automática pela internet via API autorizada
+
+Sites como `leilaoimovel.com.br`, Portal Zuk e endpoints internos da Caixa podem bloquear scraping direto por `robots.txt`, CAPTCHA ou proteção anti-bot. Para automatizar sem burlar essas regras, configure um provedor autorizado por API.
+
+O projeto já suporta Apify para coletar páginas como Indaiatuba/SP e Salto/SP:
+
+```env
+APIFY_TOKEN=seu_token
+APIFY_LEILAOIMOVEL_ACTOR_ID=gio21~leilaoimovel-scraper
+APIFY_MAX_ITEMS=100
+```
+
+Depois execute:
+
+```powershell
+python -m leilao_app.cli collect-apify --url https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp --url https://www.leilaoimovel.com.br/leilao-de-imovel/salto-sp
+```
+
+Ou use a aba `Admin > Coleta automática autorizada via API`.
+
 ## Banco de dados
 
 O padrão é SQLite em `data/leiloes.db`.
