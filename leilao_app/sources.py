@@ -1,0 +1,33 @@
+CAPTURE_SOURCE_URLS = [
+    # Agregadores amplos
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/sp",
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/mg",
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/pr",
+    "https://www.leilaoimovel.com.br/leilao-de-imoveis/sc",
+    "https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp",
+    "https://www.leilaoimovel.com.br/leilao-de-imovel/salto-sp",
+    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/sp",
+    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/mg",
+    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/pr",
+    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/sc",
+    "https://www.lailo.com.br/",
+    "https://oportuno.com.br/",
+    # Bancos e páginas oficiais
+    "https://venda-imoveis.caixa.gov.br/sistema/busca-imovel.asp?sltTipoBusca=imoveis",
+    "https://venda-imoveis.caixa.gov.br/sistema/download-lista.asp",
+    "https://www.santanderimoveis.com.br/",
+    "https://www.itau.com.br/imoveis-itau",
+    "https://www.bradescocomercioeletronico.com.br/html/classic/produtos-servicos/leiloes/index.shtm",
+    # Leiloeiros e plataformas com imóveis em SP/MG/PR/SC
+    "https://www.biasileiloes.com.br/",
+    "https://www.megaleiloes.com.br/leiloes/imoveis",
+    "https://www.frazaoleiloes.com.br/leiloes/enforce",
+    "https://www.freitasleiloeiro.com.br/Home/Index",
+    "https://www.freitasleiloeiro.com.br/Leiloes/Lotes?leilaoId=7643",
+    "https://www.eleiloeiro.com.br/",
+    "https://www.e-leiloeiro.leilao.br/",
+    "https://glleiloes.com.br/",
+    "https://www.nogarileiloes.com.br/",
+    "https://www.gilsonleiloes.com.br/",
+    "https://www.wmsleiloes.com.br/",
+]

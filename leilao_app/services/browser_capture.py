@@ -11,26 +11,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from ..config import INBOX_DIR
+from ..sources import CAPTURE_SOURCE_URLS
 from .importer import import_inbox
 
 
-DEFAULT_CAPTURE_URLS = [
-    "https://www.leilaoimovel.com.br/leilao-de-imoveis/sp",
-    "https://www.leilaoimovel.com.br/leilao-de-imoveis/mg",
-    "https://www.leilaoimovel.com.br/leilao-de-imoveis/pr",
-    "https://www.leilaoimovel.com.br/leilao-de-imoveis/sc",
-    "https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp",
-    "https://www.leilaoimovel.com.br/leilao-de-imovel/salto-sp",
-    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/sp",
-    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/mg",
-    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/pr",
-    "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/sc",
-    "https://www.biasi.com.br/",
-    "https://venda-imoveis.caixa.gov.br/sistema/busca-imovel.asp?sltTipoBusca=imoveis",
-    "https://www.santanderimoveis.com.br/",
-    "https://www.itau.com.br/imoveis-itau",
-    "https://www.bradescoimoveis.com.br/",
-]
+DEFAULT_CAPTURE_URLS = CAPTURE_SOURCE_URLS
 
 
 def _safe_name(url: str) -> str:

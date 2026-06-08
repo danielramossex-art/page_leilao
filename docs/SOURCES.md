@@ -55,6 +55,30 @@ Data de referência deste projeto: 2026-06-08.
 - Motivo: o site direto bloqueia coleta local por `robots.txt`; o projeto não tenta contornar esse bloqueio.
 - Manutenção futura: média. O schema de retorno do ator Apify pode mudar e o normalizador aceita múltiplos nomes de campos.
 
+## Catálogo de captura por navegador
+
+Além dos conectores diretos, o projeto mantém um catálogo de URLs em `leilao_app/sources.py` para captura por navegador assistido. Inclui:
+
+- Leilão Imóvel por estado e cidades prioritárias;
+- Portal Zuk por estado;
+- Caixa;
+- Santander;
+- Itaú;
+- Bradesco;
+- Biasi;
+- Mega Leilões;
+- Frazão Leilões;
+- Freitas Leiloeiro;
+- E-leilões / E-leiloeiro;
+- GL Leilões;
+- Nogari;
+- Gilson;
+- WMS;
+- Lailo;
+- Oportuno.
+
+Nem toda fonte terá parser estruturado no primeiro carregamento. Quando o site usa layout próprio, o arquivo HTML capturado fica em `data/processed` ou `data/failed` para permitir ajuste incremental do parser.
+
 ## OpenStreetMap / Nominatim
 
 - Uso: geocoding de endereços quando disponível.
