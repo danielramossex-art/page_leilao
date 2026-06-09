@@ -24,6 +24,17 @@ def normalize_text(value: str | None) -> str | None:
     return value or None
 
 
+def normalize_city_name(value: str | None) -> str | None:
+    value = normalize_text(value)
+    if not value:
+        return None
+    value = value.replace("ă", "ã").replace("Ă", "Ã")
+    words = value.title().split()
+    lowercase_words = {"Da", "Das", "De", "Do", "Dos", "E"}
+    normalized = [word.lower() if word in lowercase_words else word for word in words]
+    return " ".join(normalized)
+
+
 def strip_accents(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value)
     return "".join(char for char in normalized if not unicodedata.combining(char))

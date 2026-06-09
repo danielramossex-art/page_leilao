@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 from ..config import FAILED_DIR, INBOX_DIR, PROCESSED_DIR
 from ..db import init_db, session_scope
-from ..utils import calculate_discount, infer_debts, infer_modality, make_fingerprint, normalize_text, parse_area, parse_date, parse_money, parse_percent
+from ..utils import calculate_discount, infer_debts, infer_modality, make_fingerprint, normalize_city_name, normalize_text, parse_area, parse_date, parse_money, parse_percent
 from .collector import upsert_property
 
 
@@ -222,6 +222,7 @@ def import_properties_dataframe(df: pd.DataFrame, default_source: str = "importa
             item["source_url"] = item.get("source_url") or ""
             if not item["source_url"]:
                 continue
+            item["city"] = normalize_city_name(item.get("city"))
 
             for field in MONEY_FIELDS:
                 item[field] = parse_money(item.get(field))
@@ -277,17 +278,21 @@ def import_inbox() -> dict[str, int]:
     files = [path for path in sorted(INBOX_DIR.iterdir()) if path.is_file() and path.suffix.lower() in supported]
     result = {"files": len(files), "saved": 0, "failed": 0}
     for path in files:
+        if not path.exists():
+            continue
         try:
             imported = import_properties_file(path, default_source=f"inbox_{path.stem}")
             result["saved"] += imported["saved"]
             destination = PROCESSED_DIR / path.name
             if destination.exists():
                 destination = PROCESSED_DIR / f"{path.stem}_{pd.Timestamp.utcnow().strftime('%Y%m%d%H%M%S')}{path.suffix}"
-            shutil.move(str(path), str(destination))
+            if path.exists():
+                shutil.move(str(path), str(destination))
         except Exception:
             result["failed"] += 1
             destination = FAILED_DIR / path.name
             if destination.exists():
                 destination = FAILED_DIR / f"{path.stem}_{pd.Timestamp.utcnow().strftime('%Y%m%d%H%M%S')}{path.suffix}"
-            shutil.move(str(path), str(destination))
+            if path.exists():
+                shutil.move(str(path), str(destination))
     return result
