@@ -81,7 +81,7 @@ def normalize_apify_item(data: dict[str, Any]) -> dict[str, Any] | None:
         "source_internal_id": str(_first(data, ["id", "propertyId", "code", "codigo"]) or source_url).strip()[:160],
         "bank_or_auctioneer": _first(data, ["bank", "banco", "auctioneer", "leiloeiro", "seller"]) or "Leilão Imóvel",
         "source_url": source_url,
-        "state": str(state).upper()[:2] if state else None,
+        "state": state,
         "city": city,
         "neighborhood": _first(data, ["neighborhood", "bairro"]),
         "address": _first(data, ["address", "endereco", "location"]),
@@ -99,6 +99,13 @@ def normalize_apify_item(data: dict[str, Any]) -> dict[str, Any] | None:
         "auction_date": parse_date(_first(data, ["auctionDate", "dataLeilao", "closingDate", "endDate"])),
         "notice_url": _first(data, ["noticeUrl", "edital", "documentUrl"]),
         "occupancy": _first(data, ["occupancy", "ocupacao", "statusOcupacao"]),
+        "accepts_financing": _first(data, ["acceptsFinancing", "financiamento"]),
+        "bedrooms": _first(data, ["bedrooms", "quartos"]),
+        "parking_spaces": _first(data, ["parkingSpaces", "vagas"]),
+        "institution": _first(data, ["bank", "banco"]),
+        "source_name": "Leilão Imóvel",
+        "official_url": _first(data, ["officialUrl", "urlOficial"]),
+        "status": _first(data, ["status", "situacao"]) or "Não informado",
         "notes": raw_text[:2000],
         "images": _images(data),
         "auction_modality": _first(data, ["modality", "modalidade"]) or infer_modality(raw_text),
@@ -124,7 +131,7 @@ def import_from_apify(urls: list[str] | None = None, max_items: int | None = Non
 
     payload = {"startUrls": [{"url": url} for url in (urls or DEFAULT_URLS)], "maxItems": max_items}
     endpoint = f"https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items"
-    response = requests.post(endpoint, params={"token": token, "clean": "true"}, json=payload, timeout=180)
+    response = requests.post(endpoint, params={"clean": "true"}, headers={"Authorization": f"Bearer {token}"}, json=payload, timeout=180)
     response.raise_for_status()
     rows = response.json()
     saved = 0

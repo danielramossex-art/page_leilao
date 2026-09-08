@@ -1,242 +1,77 @@
-# Monitor Local de Leilões Imobiliários
+# Seach page Leilão
 
-Aplicação local em Python + Streamlit para monitorar, coletar, analisar e ranquear imóveis em leilão nos estados de SP, MG, PR e SC.
+Aplicação local existente em Python + Streamlit para encontrar imóveis de bancos e leiloeiros, comparar preço e avaliação e examinar uma análise simples. Não é uma recomendação financeira.
 
-## Arquitetura
+## Executar
 
-```text
-Page_leilao/
-  app.py                         # Interface Streamlit
-  requirements.txt               # Dependências
-  .env.example                   # Configuração local
-  Dockerfile                     # Execução opcional em container
-  docker-compose.yml
-  data/
-    leiloes.db                   # SQLite criado na primeira execução
-    cache/                       # Cache HTTP
-    logs/app.log                 # Logs rotativos
-  docs/
-    SOURCES.md                   # Fontes, limitações e manutenção
-  leilao_app/
-    config.py                    # Settings e paths
-    db.py                        # SQLAlchemy engine/session
-    models.py                    # Tabelas e históricos
-    cli.py                       # init-db e collect
-    scheduler_worker.py          # APScheduler a cada 1 hora
-    connectors/
-      connector_caixa.py         # Alias compatível
-      connector_bb.py
-      connector_santander.py
-      connector_itau.py
-      connector_leiloeiros.py
-      base.py                    # Contrato comum
-      caixa.py bb.py santander.py itau.py leiloeiros.py
-    services/
-      http_client.py             # cache, retry, rate limit, robots.txt
-      collector.py               # orquestra coleta, upsert e histórico
-      scoring.py                 # score financeiro/jurídico/liquidez/localização
-      neighborhood.py            # classificação de bairro
-      geocoding.py               # OpenStreetMap/Nominatim
-      alerts.py                  # alertas
-```
-
-## Instalação
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+~~~powershell
 pip install -r requirements.txt
-Copy-Item .env.example .env
 python -m leilao_app.cli init-db
-```
-
-## Execução
-
-```powershell
-streamlit run app.py
-```
-
-Abra o endereço exibido pelo Streamlit, normalmente `http://localhost:8501`.
-
-Para fechar instâncias antigas deste projeto e iniciar sempre a versão atual em uma porta fixa:
-
-```powershell
 .\scripts\start_current.ps1 -Port 8512
-```
+~~~
 
-Para rodar a coleta agendada em processo separado:
+Abra http://localhost:8512. O script reinicia apenas o servidor deste projeto na porta informada. Alternativa: python -m streamlit run app.py.
 
-```powershell
+A aplicação usa SQLite por padrão. Preserve seu .env; não copie o exemplo sobre uma configuração existente. DATABASE_URL pode apontar para outro banco compatível com SQLAlchemy. A revisão foi testada com SQLite.
+
+## Uso
+
+1. Selecione estado, cidade, tipo e preço máximo. Zero no filtro de preço significa sem limite.
+2. Clique em **Buscar imóveis**. Valores mínimo, desconto, fonte, modalidade, ocupação e financiamento ficam em **Mais filtros**.
+3. Ordene por interesse, desconto, preço ou data. Resultados usam cards e paginação de 12 itens.
+4. **Ver detalhes** abre um endereço próprio (?imovel=...) com galeria, valores, localização, análise, edital e fonte.
+5. Favoritos ficam no banco local, compartilhados por quem usa esta instalação. Não há sistema de contas.
+6. O simulador usa estimativas editáveis separadas dos dados da fonte.
+
+A interface não inicia coletas nem serviços pagos ao abrir a página. Administração reúne importação e diagnóstico. Para coleta agendada, execute separadamente:
+
+~~~powershell
 python -m leilao_app.scheduler_worker
-```
+~~~
 
-Para coletar manualmente pelo terminal:
+## Dados e fontes
 
-```powershell
-python -m leilao_app.cli collect
-python -m leilao_app.cli collect --source caixa
-```
+- CAIXA: parser de exportação CSV oficial com cabeçalhos; valida a estrutura e recusa páginas de bloqueio.
+- Mega Leilões: parser validado de listagens e detalhes, fotos limitadas ao código do lote, preços por praça e avaliação identificada.
+- Santander, Bradesco, Itaú, Zuk, Frazão, Biasi, Sodré Santoro e demais fontes do catálogo continuam aceitos por importação de campos nomeados. HTML estruturado é aceito quando a fonte publica JSON-LD do imóvel com URL correspondente, endereço e oferta em BRL. Isso **não significa coleta automática validada em todas as fontes**.
+- Apify continua opcional, configurado por APIFY_TOKEN e APIFY_LEILAOIMOVEL_ACTOR_ID. Sua execução não foi validada nesta revisão.
+- Nenhuma foto genérica é procurada. Falha ou ausência de imagem exibe **Imagem não disponível**.
+- Uma coleta vazia, CAPTCHA, bloqueio ou erro de rede não retira imóveis. Encerramento é baseado em status explícito ou data final conhecida.
+- Preços sem avaliação não recebem desconto calculado nem score. Preço acima da avaliação gera diferença negativa, não desconto zero inventado.
+- Dados legados anteriores à revisão ficam preservados, identificados como legacy, fora dos resultados ativos até reimportação confiável. Estão acessíveis na administração/histórico.
+- A migração é aditiva e cria backup SQLite em data/backups/ antes de adicionar colunas.
 
-## Importação CSV quando uma fonte bloquear scraping
+Importação:
 
-Algumas fontes usam CAPTCHA ou proteção anti-bot. Nesses casos, a aplicação não tenta contornar o bloqueio: ela registra a falha no Admin e você pode importar dados por CSV.
-
-Modelo de arquivo: `samples/imoveis_importacao.csv`.
-
-## Automação sem token: pasta monitorada
-
-Na aplicação, abra a aba `Admin`, selecione o CSV em `Importar imóveis por CSV` e clique em `Importar CSV`.
-
-Para um fluxo automático sem Apify, salve ou baixe arquivos em:
-
-```text
-data/inbox
-```
-
-Formatos aceitos:
-
-- `.csv`
-- `.xlsx`
-- `.xls`
-- `.html`
-
-O sistema lê a pasta no botão `Coletar agora`, no scheduler de 1 hora e pelo comando abaixo. Arquivos importados vão para `data/processed`; arquivos com erro vão para `data/failed`.
-
-```powershell
+~~~powershell
+python -m leilao_app.cli import-csv --file caminho\imoveis.csv
 python -m leilao_app.cli import-inbox
-```
+python -m leilao_app.cli collect --source caixa
+python -m leilao_app.cli capture-url --url URL_OFICIAL --headless
+~~~
 
-Para capturar automaticamente uma página pelo navegador e importar o HTML:
+A pasta data/inbox aceita CSV, TSV, XLSX, XLS (requer xlrd) e HTML reconhecido. Layout desconhecido vai para data/failed em vez de aparecer como sucesso. O CSV de samples/ é demonstrativo, não deve ser usado como oferta real.
 
-```powershell
-python -m leilao_app.cli capture-url --url https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp
-```
+Campos adicionais opcionais: institution, source_name, official_url, bedrooms, parking_spaces, accepts_financing, status, ends_at, source_updated_at. Use células vazias para dados desconhecidos, não zero. Imagens podem ser separadas por |.
 
-O navegador abre a página, salva o HTML em `data/inbox` e importa os imóveis encontrados. Se a página exigir interação humana, deixe `--headless` desligado e resolva no navegador aberto.
+## Análise Seach page Leilão
 
-Também é possível importar pelo terminal:
+Score inteiro entre 0 e 100, baseado apenas nos dados disponíveis. Base 35 + desconto limitado entre −35 e +50 pontos; desocupação +8, ocupação −12; financiamento +4/−4; edital +4; venda direta +3, segunda praça −5 ou judicial −8; dívidas explicitamente informadas −10.
 
-```powershell
-python -m leilao_app.cli import-csv --file samples\imoveis_importacao.csv
-```
+75–100: oportunidade interessante; 40–74: analisar com atenção; 0–39: alto risco/baixo atrativo. Ocupação desconhecida/confirmada, condições operacionais ausentes ou dívidas impedem classificação verde. Sem preço, avaliação, cidade, UF ou tipo: **Dados insuficientes**, sem pontuação.
 
-## Coleta automática pela internet via API autorizada
+Avaliação é a informada pela fonte, não preço de mercado. Não pontuamos qualidade do bairro, liquidez ou localização sem base confiável. Confira custos e condições no edital.
 
-Sites como `leilaoimovel.com.br`, Portal Zuk e endpoints internos da Caixa podem bloquear scraping direto por `robots.txt`, CAPTCHA ou proteção anti-bot. Para automatizar sem burlar essas regras, configure um provedor autorizado por API.
+## Verificação
 
-O projeto já suporta Apify para coletar páginas como Indaiatuba/SP e Salto/SP:
+~~~powershell
+python -m compileall -q app.py leilao_app
+python -m unittest discover -s tests -v
+python scripts/validate_browser.py
+~~~
 
-```env
-APIFY_TOKEN=seu_token
-APIFY_LEILAOIMOVEL_ACTOR_ID=gio21~leilaoimovel-scraper
-APIFY_MAX_ITEMS=10000
-```
+O teste de navegador exige servidor em 8512, Chrome e a base de validação de Jundiaí. Evidências locais ficam em data/validation/, ignoradas pelo Git. scripts/validate_review.py compara capturas oficiais salvas; com --import-verified-captures, importa os registros comparados.
 
-Depois execute:
+Docker permanece opcional (docker compose up --build); imagens não incluem .env, banco ou capturas. O build Docker não substitui a compilação e os testes Python e não foi executado na revisão.
 
-```powershell
-python -m leilao_app.cli collect-apify --url https://www.leilaoimovel.com.br/leilao-de-imoveis/sp --url https://www.leilaoimovel.com.br/leilao-de-imoveis/mg --url https://www.leilaoimovel.com.br/leilao-de-imoveis/pr --url https://www.leilaoimovel.com.br/leilao-de-imoveis/sc
-```
-
-Ou use a aba `Admin > Coleta automática autorizada via API`.
-
-## Banco de dados
-
-O padrão é SQLite em `data/leiloes.db`.
-
-Para migrar futuramente para PostgreSQL, altere no `.env`:
-
-```env
-DATABASE_URL=postgresql+psycopg://usuario:senha@localhost:5432/leiloes
-```
-
-Será necessário instalar o driver PostgreSQL escolhido, por exemplo `psycopg`.
-
-## O que é salvo
-
-O banco armazena:
-
-- imóvel e origem;
-- URL oficial obrigatória;
-- histórico de preços;
-- histórico de status;
-- histórico de score;
-- histórico de imagens;
-- histórico de alterações;
-- erros e execuções de coleta;
-- alertas.
-
-Campos jurídicos obrigatórios:
-
-- `auction_modality`: Judicial, Extrajudicial ou Não informado;
-- `has_debts`: Com dívidas, Sem dívidas ou Não informado;
-- `debt_value`;
-- `debt_description`;
-- `debt_information_source`.
-
-## Coleta automática
-
-O app inicia um scheduler em background quando está aberto. Para produção local mais estável, prefira deixar também o worker dedicado rodando:
-
-```powershell
-python -m leilao_app.scheduler_worker
-```
-
-O intervalo padrão é 60 minutos e pode ser alterado em `.env`:
-
-```env
-COLLECT_INTERVAL_MINUTES=60
-```
-
-## Respeito a fontes públicas
-
-O coletor:
-
-- verifica `robots.txt`;
-- usa `User-Agent` configurável;
-- aplica cache HTTP local;
-- aplica retry com backoff;
-- limita requisições por domínio;
-- registra falhas sem interromper todo o sistema.
-
-Se uma fonte bloquear scraping ou exigir autenticação/captcha, a falha aparece no painel Admin.
-
-## Adicionando novo conector
-
-1. Crie `leilao_app/connectors/minha_fonte.py`.
-2. Herde de `BaseConnector`.
-3. Implemente `fetch()` retornando lista de `dict`.
-4. Use `RawProperty(...).as_dict()` para normalizar.
-5. Registre o conector em `leilao_app/connectors/__init__.py`.
-6. Documente a fonte em `docs/SOURCES.md`.
-
-Exemplo mínimo:
-
-```python
-from .base import BaseConnector, RawProperty
-
-class MinhaFonteConnector(BaseConnector):
-    source = "minha_fonte"
-    bank_or_auctioneer = "Minha Fonte"
-    start_urls = ["https://exemplo.com/imoveis"]
-
-    def fetch(self):
-        soup = self.get_soup(self.start_urls[0])
-        items = []
-        for card in soup.select(".imovel"):
-            raw = RawProperty(
-                source=self.source,
-                bank_or_auctioneer=self.bank_or_auctioneer,
-                source_url=self.start_urls[0],
-                state="SP",
-                city="São Paulo",
-            )
-            items.append(raw.as_dict())
-        return items
-```
-
-## Limitações
-
-Não há garantia de disponibilidade contínua das fontes externas. Bancos e leiloeiros podem alterar HTML, impor bloqueios, exigir JavaScript, captcha ou remover informações. O sistema foi desenhado para registrar falhas e facilitar manutenção dos conectores sem quebrar o portal local.
-
-As classificações de bairro e scores são heurísticos para triagem. Antes de qualquer investimento, confira edital, matrícula, ocupação, débitos de IPTU/condomínio, ações judiciais, regras do leiloeiro e liquidez real do mercado local.
+Consulte [diagnóstico inicial](docs/REVISAO_INICIAL.md), [fontes e limitações](docs/SOURCES.md) e [relatório final](docs/REVISAO_FINAL.md).

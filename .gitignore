@@ -11,3 +11,5 @@ data/logs/
 data/inbox/
 data/processed/
 data/failed/
+data/backups/
+data/validation/

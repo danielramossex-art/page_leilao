@@ -30,6 +30,12 @@ Fontes no catalogo:
 - Superbid Exchange;
 - Biasi Leiloes;
 - Mega Leiloes;
+- Spy Leiloes;
+- Gold Leiloes;
+- Cravo Leiloes;
+- Valero Leiloes;
+- Gustavo Moretto Leiloeiro;
+- Kwara Leiloes;
 - Frazao Leiloes;
 - Freitas Leiloeiro;
 - E-leiloeiro / Eleiloeiro;
@@ -41,6 +47,6 @@ Fontes no catalogo:
 - Milan Leiloes;
 - Lance no Leilao.
 
-O parser estruturado mais maduro hoje e o do `leilaoimovel.com.br`, que extrai imagens, endereco, cidade, estado, valores, desconto, modalidade/dividas por heuristica e link original. As demais fontes ficam prontas para captura por navegador e evolucao incremental de parser conforme os HTMLs reais forem capturados.
+Na revisão de 08/09/2026, o parser HTML validado é o da Mega Leilões. Outros portais são aceitos por CSV ou JSON-LD do imóvel, quando houver campos e URL correspondentes. Os parsers antigos que dependiam da posição dos preços e de Indaiatuba foram substituídos para evitar dados incorretos.
 
-Sites com `robots.txt`, CAPTCHA ou bloqueio anti-bot nao sao burlados. Para esses casos, use API autorizada, exportacao oficial, Apify com token proprio ou captura assistida no navegador.
+Fontes com bloqueio não são contornadas. Uma captura sem imóveis reconhecidos é tratada como falha, não como importação bem-sucedida. Consulte SOURCES.md para a matriz de validação.

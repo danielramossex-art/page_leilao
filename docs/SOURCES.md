@@ -1,101 +1,37 @@
-# Fontes de Dados
+# Fontes e qualidade dos dados
 
-Data de referência deste projeto: 2026-06-08.
+Revisão: 08/09/2026.
 
-## Caixa Econômica Federal
+| Fonte | Caminho mantido | Validação nesta revisão |
+|---|---|---|
+| CAIXA | CSV oficial e importação de campos nomeados | Lista SP respondeu 200 inicialmente, geração 04/09; consultas seguintes receberam bloqueio. Parser coberto por testes; sem alegar coleta completa. |
+| Mega Leilões | HTML de listagem e detalhe / CSV | 5 ofertas reais em Jundiaí, 3 detalhes comparados, fotos vinculadas ao lote e carregadas no navegador. |
+| Santander | Conector/catálogo, CSV, JSON-LD compatível | Automação externa não validada. |
+| Bradesco | Catálogo, CSV, JSON-LD compatível | Automação externa não validada. |
+| Itaú | Conector/catálogo, CSV, JSON-LD compatível | Automação externa não validada. |
+| Portal Zuk | Catálogo, CSV, JSON-LD compatível | Listagem acessível pela ferramenta web; navegador local bloqueado. Nenhum resultado inventado. |
+| Frazão, Biasi, Sodré Santoro | Catálogo, CSV, JSON-LD compatível | Automação externa não validada. |
+| Banco do Brasil e demais leiloeiros | Catálogo/conectores existentes, CSV | Layouts desconhecidos são recusados, sem fallback monetário por posição. |
+| Leilão Imóvel / Apify | CSV e normalizador da API opcional | API exige configuração do usuário. HTML antigo por heurística foi retirado da importação automática. |
 
-- URL inicial: `https://venda-imoveis.caixa.gov.br/sistema/busca-imovel.asp`
-- Método: scraping defensivo de HTML público.
-- API pública documentada: não identificada para consulta ampla de imóveis.
-- Manutenção futura: alta. O portal usa ASP e pode mudar parâmetros, sessão, cookies e marcação.
-- Observação: em leilão/licitação, a Caixa direciona o usuário para leiloeiros oficiais indicados no edital.
+## Critérios
 
-## Banco do Brasil
+Uma URL no catálogo não garante cobertura automática. Cada fonte pode exigir atualização do parser, acesso assistido, exportação oficial ou configuração externa.
 
-- URL inicial: `https://www.seuimovelbb.com.br/`
-- Método: scraping defensivo de HTML público.
-- API pública documentada: não identificada.
-- Manutenção futura: média/alta. O portal pode usar conteúdo dinâmico.
+Fotos devem vir do registro específico. Mega usa somente imagens cujo caminho contém o código do lote, com prioridade para a imagem principal oficial. Os outros caminhos aceitam apenas URLs fornecidas no próprio registro importado ou no JSON-LD correspondente à URL do imóvel.
 
-## Santander
+Preço de primeira praça não é automaticamente avaliação. Desconto de segunda praça futura não é desconto vigente. Ocupação, financiamento e dívidas precisam de informação explícita; menção genérica a IPTU ou condomínio não prova dívida.
 
-- URLs iniciais:
-  - `https://www.santanderimoveis.com.br/`
-  - `https://www.santander.com.br/hotsite/santanderimoveis/`
-- Método: scraping defensivo de HTML público.
-- API pública documentada: não identificada.
-- Manutenção futura: alta. Parte dos leilões pode ocorrer em leiloeiros parceiros.
+Instituição e fonte são campos separados: a mera menção a um banco numa hipoteca ou processo não transforma o banco em vendedor da oferta.
 
-## Itaú
+Falhas HTTP, CAPTCHA, robots.txt e listas vazias não indicam retirada de imóveis. Status explícito e data final conhecida são preservados; não há varredura completa e garantida de disponibilidade em todas as fontes.
 
-- URL inicial: `https://www.itau.com.br/imoveis-itau`
-- Método: scraping defensivo de HTML público.
-- API pública documentada: não identificada.
-- Manutenção futura: média/alta. A página pode direcionar para leiloeiros parceiros e editais em PDF.
+## Casos comparados
 
-## Leiloeiros oficiais
+- [J127385 — Vila Santana II](https://www.megaleiloes.com.br/imoveis/casas/sp/jundiai/casas-em-terreno-de-506-m2-vila-santana-ll-jundiai-sp-j127385): preço/avaliação R$ 596.025,74; primeira praça 01/10/2026, segunda 22/10/2026.
+- [J128502 — Vila das Hortências](https://www.megaleiloes.com.br/imoveis/apartamentos/sp/jundiai/apartamento-95-m2-02-vagas-vila-das-hortencias-jundiai-sp-j128502): preço/avaliação R$ 648.396,00; primeira praça 26/10/2026, segunda 16/11/2026.
+- [J128529 — Jardim Messina](https://www.megaleiloes.com.br/imoveis/apartamentos/sp/jundiai/apartamento-77-m2-01-vaga-jardim-messina-jundiai-sp-j128529): preço/avaliação R$ 538.051,41; primeira praça 29/10/2026, segunda 18/11/2026. A descrição diverge do título sobre vagas; o campo fica desconhecido.
 
-- URLs iniciais:
-  - `https://www.megaleiloes.com.br/leiloes/imoveis`
-  - `https://www.zuk.com.br/imoveis`
-  - `https://www.leilaovip.com.br/`
-  - `https://www.freitasleiloeiro.com.br/leiloes/imoveis`
-- Método: scraping defensivo de HTML público.
-- API pública documentada: varia por leiloeiro; não presumida.
-- Manutenção futura: alta, pois cada leiloeiro tem regras, termos, marcação e proteção próprios.
+Os três têm desconto atual calculado de 0%, e não os 30%, 40% e 50% anunciados para a segunda praça. Avaliação e oferta foram comparadas como campos distintos, apesar de seus valores atuais coincidirem.
 
-## Leilão Imóvel via Apify
-
-- URLs iniciais:
-  - `https://www.leilaoimovel.com.br/leilao-de-imoveis/sp`
-  - `https://www.leilaoimovel.com.br/leilao-de-imoveis/mg`
-  - `https://www.leilaoimovel.com.br/leilao-de-imoveis/pr`
-  - `https://www.leilaoimovel.com.br/leilao-de-imoveis/sc`
-- Método: API autorizada via Apify, configurada por `APIFY_TOKEN`.
-- Motivo: o site direto bloqueia coleta local por `robots.txt`; o projeto não tenta contornar esse bloqueio.
-- Manutenção futura: média. O schema de retorno do ator Apify pode mudar e o normalizador aceita múltiplos nomes de campos.
-
-## Catálogo de captura por navegador
-
-Além dos conectores diretos, o projeto mantém um catálogo de URLs em `leilao_app/sources.py` para captura por navegador assistido. Inclui:
-
-- Leilão Imóvel por estado e cidades prioritárias;
-- Portal Zuk por estado;
-- Caixa;
-- Santander;
-- Itaú;
-- Bradesco;
-- Biasi;
-- Mega Leilões;
-- Frazão Leilões;
-- Freitas Leiloeiro;
-- E-leilões / E-leiloeiro;
-- GL Leilões;
-- Nogari;
-- Gilson;
-- WMS;
-- Lailo;
-- Oportuno.
-
-Nem toda fonte terá parser estruturado no primeiro carregamento. Quando o site usa layout próprio, o arquivo HTML capturado fica em `data/processed` ou `data/failed` para permitir ajuste incremental do parser.
-
-## OpenStreetMap / Nominatim
-
-- Uso: geocoding de endereços quando disponível.
-- Método: API pública Nominatim.
-- Restrições: respeitar política de uso, baixa frequência e cache local. O projeto aplica pausa entre chamadas e cache HTTP.
-
-## Regras implementadas
-
-- `robots.txt` é consultado antes da requisição.
-- páginas de CAPTCHA/bloqueio anti-bot, como Radware Bot Manager, são detectadas e não são gravadas como imóveis;
-- Cache local reduz acessos repetidos.
-- Retry com backoff reduz falhas transitórias.
-- Limite por domínio evita rajadas.
-- Campos ausentes são salvos como `Não informado` ou `NULL`.
-- Débitos e modalidade são inferidos por texto do anúncio/edital quando disponível:
-  - texto com débitos, IPTU, condomínio, ônus ou laudêmio: `Com dívidas`;
-  - texto indicando ausência de débitos/ônus: `Sem dívidas`;
-  - ausência de evidência: `Não informado`;
-  - texto judicial/processo/vara: `Judicial`;
-  - texto extrajudicial/alienação fiduciária: `Extrajudicial`.
+Evidências completas e capturas permanecem localmente em data/validation/, fora do Git.

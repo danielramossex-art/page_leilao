@@ -22,7 +22,14 @@ SOURCE_CATALOG: tuple[SourcePage, ...] = (
     SourcePage("Leilao Imovel MG", "https://www.leilaoimovel.com.br/leilao-de-imoveis/mg", "agregador", ("MG",), "html_parser"),
     SourcePage("Leilao Imovel PR", "https://www.leilaoimovel.com.br/leilao-de-imoveis/pr", "agregador", ("PR",), "html_parser"),
     SourcePage("Leilao Imovel SC", "https://www.leilaoimovel.com.br/leilao-de-imoveis/sc", "agregador", ("SC",), "html_parser"),
-    SourcePage("Leilao Imovel Indaiatuba", "https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp", "cidade", ("SP",), "html_parser"),
+    SourcePage("Leilao Imovel Indaiatuba pagina 1", "https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp?pag=1", "cidade", ("SP",), "html_parser"),
+    SourcePage("Leilao Imovel Indaiatuba pagina 2", "https://www.leilaoimovel.com.br/leilao-de-imovel/indaiatuba-sp?pag=2", "cidade", ("SP",), "html_parser"),
+    SourcePage("Caixa Park Gran Reserve Indaiatuba", "https://www.leilaoimovel.com.br/imovel/sp/indaiatuba/terreno-loteamento-park-gran-reserve-imovel-caixa-economica-federal-cef-2794686-1444417193842-venda-direta-caixa", "cidade", ("SP",), "html_parser"),
+    SourcePage("Apartamento Indaiatuba 2955795", "https://www.leilaoimovel.com.br/imovel/sp/indaiatuba/residencial-apartamento-indaiatuba-sp-imovel-2955795", "cidade", ("SP",), "html_parser"),
+    # Paginas oficiais já filtradas pela cidade. Evita depender de uma varredura
+    # estadual (e de o nome da cidade aparecer nos primeiros cards carregados).
+    SourcePage("Portal Zuk Indaiatuba", "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/sp/interior/indaiatuba", "cidade", ("SP",), "html_parser"),
+    SourcePage("Mega Leiloes Indaiatuba", "https://www.megaleiloes.com.br/imoveis/sp/indaiatuba?ordem=popularidade&pagina=1", "cidade", ("SP",), "html_parser"),
     SourcePage("Leilao Imovel Salto", "https://www.leilaoimovel.com.br/leilao-de-imovel/salto-sp", "cidade", ("SP",), "html_parser"),
     SourcePage("Portal Zuk SP", "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/sp", "agregador", ("SP",)),
     SourcePage("Portal Zuk MG", "https://www.portalzuk.com.br/leilao-de-imoveis/c/todos-imoveis/mg", "agregador", ("MG",)),
@@ -42,6 +49,12 @@ SOURCE_CATALOG: tuple[SourcePage, ...] = (
     # Leiloeiros/plataformas com imoveis recorrentes nos estados-alvo.
     SourcePage("Biasi Leiloes", "https://www.biasileiloes.com.br/", "leiloeiro", ("SP",)),
     SourcePage("Mega Leiloes", "https://www.megaleiloes.com.br/leiloes/imoveis", "leiloeiro"),
+    SourcePage("Spy Leiloes", "https://spyleiloes.com.br/", "leiloeiro", ("SP",)),
+    SourcePage("Gold Leiloes", "https://leiloesgold.com.br/", "leiloeiro", ("SP",)),
+    SourcePage("Cravo Leiloes", "https://cravoleiloes.com.br/", "leiloeiro", ("SP",)),
+    SourcePage("Valero Leiloes", "https://valeroleiloes.com.br/", "leiloeiro", ("SP",)),
+    SourcePage("Gustavo Moretto Leiloeiro", "https://gustavomorettoleiloeiro.com.br/", "leiloeiro", ("SP",)),
+    SourcePage("Kwara Leiloes", "https://kwara.com.br/", "leiloeiro", ("SP",)),
     SourcePage("Frazao Leiloes", "https://www.frazaoleiloes.com.br/leiloes/enforce", "leiloeiro"),
     SourcePage("Freitas Leiloeiro", "https://www.freitasleiloeiro.com.br/Home/Index", "leiloeiro"),
     SourcePage("E-leiloeiro", "https://www.e-leiloeiro.leilao.br/", "leiloeiro"),

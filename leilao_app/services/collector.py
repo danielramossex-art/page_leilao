@@ -20,14 +20,19 @@ from ..models import (
     StatusHistory,
 )
 from .alerts import create_alerts_for_property
-from .geocoding import geocode
-from .neighborhood import classify_neighborhood
 from .scoring import calculate_score
+from .quality import city_name, financing, is_inactive, occupancy, optional_count, positive_number, safe_url, state_name
+from ..utils import calculate_discount, make_fingerprint
 
 logger = logging.getLogger(__name__)
 
+INACTIVE_AUCTION_TERMS = ("encerrado", "finalizado", "sustado", "cancelado", "suspenso", "arrematado")
+
 
 TRACKED_FIELDS = [
+    "institution", "source_name", "official_url", "bedrooms", "parking_spaces", "accepts_financing",
+    "data_quality", "verified_at", "source_updated_at", "ends_at", "opportunity_score",
+    "score_explanation", "automatic_summary",
     "source_url",
     "bank_or_auctioneer",
     "state",
@@ -75,6 +80,8 @@ def run_collection(selected_sources: list[str] | None = None) -> dict[str, Any]:
         try:
             logger.info("collection_start source=%s", connector.source)
             items = connector.fetch()
+            if not items:
+                raise RuntimeError("Coleta sem registros estruturados; disponibilidade não foi atualizada.")
             saved = 0
             with session_scope() as session:
                 run = session.get(CollectionRun, run_id)
@@ -101,8 +108,23 @@ def run_collection(selected_sources: list[str] | None = None) -> dict[str, Any]:
 
 
 def upsert_property(session: Session, item: dict[str, Any]) -> bool:
-    item = prepare_item(item)
+    item = dict(item)
+    item["source_url"] = safe_url(item.get("source_url"))
+    if not item["source_url"]:
+        return False
+    item["source_internal_id"] = str(item["source_internal_id"]).strip() if item.get("source_internal_id") else None
+    item["fingerprint"] = make_fingerprint([item.get("source"), item.get("source_internal_id") or item["source_url"]])
     existing = find_existing(session, item)
+    if existing is not None:
+        merged = {key: getattr(existing, key) for key in property_columns()}
+        if existing.data_quality == "legacy":
+            for field in ("appraisal_value", "minimum_value", "current_bid_value", "latitude", "longitude", "occupancy", "debt_value"):
+                merged[field] = None
+            merged["has_debts"] = "Não informado"
+            item.setdefault("images", [])
+        merged.update(item)
+        item = merged
+    item = prepare_item(item)
     is_new = existing is None
     price_reduced = False
 
@@ -120,42 +142,48 @@ def upsert_property(session: Session, item: dict[str, Any]) -> bool:
                 continue
             old = getattr(prop, field)
             new = item.get(field)
-            if old != new and new is not None:
+            if old != new:
                 session.add(ChangeHistory(property_id=prop.id, field_name=field, old_value=str(old), new_value=str(new)))
                 setattr(prop, field, new)
+                if field == "status":
+                    session.add(StatusHistory(property_id=prop.id, status=new))
         prop.updated_at = datetime.utcnow()
         prop.collected_at = datetime.utcnow()
         price_reduced = bool(old_minimum and prop.minimum_value and prop.minimum_value < old_minimum)
 
-    replace_images(session, prop, item.get("images", []))
+    if "images" in item:
+        replace_images(session, prop, item["images"])
     append_histories(session, prop)
     create_alerts_for_property(session, prop, is_new, price_reduced)
     return True
 
 
 def prepare_item(item: dict[str, Any]) -> dict[str, Any]:
-    if not item.get("latitude") or not item.get("longitude"):
-        lat, lon = geocode(item.get("address"), item.get("city"), item.get("state"))
-        item["latitude"] = item.get("latitude") or lat
-        item["longitude"] = item.get("longitude") or lon
-
-    neighborhood_classification, neighborhood_reason = classify_neighborhood(
-        item.get("city"),
-        item.get("neighborhood"),
-        {"discount_percent": item.get("discount_percent"), "minimum_value": item.get("minimum_value")},
-    )
-    item["neighborhood_classification"] = neighborhood_classification
-    item["neighborhood_reason"] = neighborhood_reason
-
+    item = dict(item)
+    item["city"] = city_name(item.get("city"))
+    item["state"] = state_name(item.get("state"))
+    for field in ("minimum_value", "appraisal_value", "current_bid_value", "built_area_m2", "land_area_m2"):
+        item[field] = positive_number(item.get(field))
+    for field in ("bedrooms", "parking_spaces"):
+        item[field] = optional_count(item.get(field))
+    item["accepts_financing"] = financing(item.get("accepts_financing"))
+    item["occupancy"] = occupancy(item.get("occupancy"))
+    item["notice_url"] = safe_url(item.get("notice_url"))
+    item["official_url"] = safe_url(item.get("official_url"))
+    item["discount_percent"] = calculate_discount(item.get("appraisal_value"), item.get("minimum_value"))
+    item["data_quality"] = item.get("data_quality") or "imported"
+    item["neighborhood_classification"] = "Não avaliado"
+    item["neighborhood_reason"] = "Sem dados de mercado/localização confiáveis para pontuar."
+    item["status"] = "Encerrado" if is_inactive(item) else (item.get("status") or "Ativo")
     score = calculate_score(item)
     item["score_financial"] = score.financial
     item["score_legal"] = score.legal
     item["score_liquidity"] = score.liquidity
     item["score_location"] = score.location
-    item["score_overall"] = score.overall
+    item["score_overall"] = score.overall or 0  # legacy NOT NULL compatibility
+    item["opportunity_score"] = score.overall  # nullable authoritative indicator
     item["score_explanation"] = score.explanation
     item["automatic_summary"] = score.summary
-    item["status"] = item.get("status") or "Ativo"
     item["collected_at"] = datetime.utcnow()
     item["updated_at"] = datetime.utcnow()
     return item
@@ -171,6 +199,9 @@ def find_existing(session: Session, item: dict[str, Any]) -> Property | None:
         ).scalar_one_or_none()
         if found:
             return found
+    found = session.scalar(select(Property).where(Property.source == item["source"], Property.source_url == item["source_url"]).order_by(Property.id).limit(1))
+    if found:
+        return found
     return session.execute(select(Property).where(Property.fingerprint == item["fingerprint"])).scalar_one_or_none()
 
 
@@ -192,25 +223,24 @@ def append_histories(session: Session, prop: Property) -> None:
             discount_percent=prop.discount_percent,
         )
     )
-    session.add(
-        ScoreHistory(
-            property_id=prop.id,
-            score_financial=prop.score_financial,
-            score_legal=prop.score_legal,
-            score_liquidity=prop.score_liquidity,
-            score_location=prop.score_location,
-            score_overall=prop.score_overall,
-            explanation=prop.score_explanation,
+    if prop.opportunity_score is not None:
+        session.add(
+            ScoreHistory(
+                property_id=prop.id,
+                score_financial=prop.score_financial,
+                score_legal=prop.score_legal,
+                score_liquidity=prop.score_liquidity,
+                score_location=prop.score_location,
+                score_overall=prop.opportunity_score,
+                explanation=prop.score_explanation,
+            )
         )
-    )
+
 
 
 def replace_images(session: Session, prop: Property, images: list[str]) -> None:
     current = {image.image_url for image in prop.images}
-    incoming = [url for url in images if url]
+    incoming = list(dict.fromkeys(url for url in images if safe_url(url)))
     if current == set(incoming):
         return
-    for image in list(prop.images):
-        session.delete(image)
-    for index, url in enumerate(incoming[:20]):
-        session.add(PropertyImage(property_id=prop.id, image_url=url, is_primary=index == 0))
+    prop.images[:] = [PropertyImage(image_url=url, is_primary=index == 0) for index, url in enumerate(incoming[:20])]

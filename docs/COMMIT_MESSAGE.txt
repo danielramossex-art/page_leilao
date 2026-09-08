@@ -1,0 +1,9 @@
+fix: simplifica busca e valida dados de imóveis no Seach page Leilão
+
+Concentra a interface existente em busca, cards, detalhes e favoritos.
+Corrige preço/avaliação, desconto, fotos vinculadas ao imóvel, score
+anulável, atualização e importação; preserva banco e históricos com backup.
+
+Validação: 16 testes de regressão, compilação Python e navegador em
+desktop/375 px; cinco ofertas reais de Jundiaí, três detalhes comparados
+com a Mega Leilões. Documenta bloqueios e fontes ainda não validadas.

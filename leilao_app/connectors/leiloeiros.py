@@ -11,6 +11,12 @@ class LeiloeirosConnector(BaseConnector):
         "https://www.zuk.com.br/imoveis",
         "https://www.leilaovip.com.br/",
         "https://www.freitasleiloeiro.com.br/leiloes/imoveis",
+        "https://spyleiloes.com.br/",
+        "https://leiloesgold.com.br/",
+        "https://cravoleiloes.com.br/",
+        "https://valeroleiloes.com.br/",
+        "https://gustavomorettoleiloeiro.com.br/",
+        "https://kwara.com.br/",
     ]
     source_type = "scraping"
     maintenance_notes = "Agregação defensiva de leiloeiros públicos; cada casa tem marcação e termos próprios."

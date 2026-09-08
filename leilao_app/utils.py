@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import re
 import unicodedata
 from datetime import datetime
@@ -41,18 +42,21 @@ def strip_accents(value: str) -> str:
 
 
 def parse_money(value: str | float | int | None) -> float | None:
-    if value is None or isinstance(value, float):
-        return value
-    if isinstance(value, int):
-        return float(value)
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (float, int)):
+        return float(value) if math.isfinite(value) else None
     cleaned = value.replace("\xa0", " ")
     cleaned = re.sub(r"[^\d,.-]", "", cleaned)
     if not cleaned:
         return None
     if "," in cleaned:
         cleaned = cleaned.replace(".", "").replace(",", ".")
+    elif re.fullmatch(r"-?\d{1,3}(?:\.\d{3})+", cleaned):
+        cleaned = cleaned.replace(".", "")
     try:
-        return float(cleaned)
+        result = float(cleaned)
+        return result if math.isfinite(result) else None
     except ValueError:
         return None
 
@@ -75,14 +79,15 @@ def parse_date(value: str | datetime | None) -> datetime | None:
     if not value:
         return None
     formats = [
-        "%d/%m/%Y %H:%M",
-        "%d/%m/%Y",
-        "%Y-%m-%d",
-        "%Y-%m-%dT%H:%M:%S",
+        ("%d/%m/%Y %H:%M", 16),
+        ("%d/%m/%Y", 10),
+        ("%Y-%m-%dT%H:%M:%S", 19),
+        ("%Y-%m-%d %H:%M:%S", 19),
+        ("%Y-%m-%d", 10),
     ]
-    for fmt in formats:
+    for fmt, length in formats:
         try:
-            return datetime.strptime(value[: len(fmt)], fmt)
+            return datetime.strptime(value[:length], fmt)
         except ValueError:
             continue
     return None
@@ -108,6 +113,15 @@ def infer_state(*parts: str | None) -> str | None:
 
 def infer_modality(text: str | None) -> str:
     plain = strip_accents((text or "").lower())
+    for terms, label in [
+        (("venda direta", "compra direta"), "Venda Direta"),
+        (("venda online", "venda on-line"), "Venda Online"),
+        (("licitacao",), "Licitação"),
+        (("2º leilao", "2o leilao", "2ª praca", "segunda praca"), "2º Leilão"),
+        (("1º leilao", "1o leilao", "1ª praca", "primeira praca"), "1º Leilão"),
+    ]:
+        if any(term in plain for term in terms):
+            return label
     if "extrajudicial" in plain or "alienacao fiduciaria" in plain:
         return "Extrajudicial"
     if "judicial" in plain or "vara" in plain or "processo" in plain:
@@ -119,9 +133,8 @@ def infer_debts(text: str | None) -> tuple[str, float | None, str | None]:
     plain = strip_accents((text or "").lower())
     if any(term in plain for term in ["sem debito", "sem onus", "quitado", "livre de debitos"]):
         return "Sem dívidas", None, "Indicação textual do edital/anúncio"
-    if any(term in plain for term in ["debito", "divida", "condominio", "iptu", "onus", "laudemio"]):
-        money_match = re.search(r"R\$\s*[\d\.\,]+", text or "")
-        return "Com dívidas", parse_money(money_match.group(0)) if money_match else None, "Indicação textual do edital/anúncio"
+    if re.search(r"(?:possui|existem|com) (?:dividas|debitos)|(?:iptu|condominio) em atraso", plain):
+        return "Com dívidas", None, "Indicação explícita no anúncio/edital"
     return "Não informado", None, None
 
 
@@ -131,6 +144,7 @@ def make_fingerprint(values: list[Any]) -> str:
 
 
 def calculate_discount(appraisal_value: float | None, minimum_value: float | None) -> float | None:
-    if not appraisal_value or not minimum_value or appraisal_value <= 0:
+    appraisal_value, minimum_value = parse_money(appraisal_value), parse_money(minimum_value)
+    if appraisal_value is None or minimum_value is None or appraisal_value <= 0 or minimum_value <= 0:
         return None
-    return round(max(0, (1 - minimum_value / appraisal_value) * 100), 2)
+    return round((1 - minimum_value / appraisal_value) * 100, 2)

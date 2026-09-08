@@ -107,24 +107,20 @@ class BaseConnector(ABC):
         return urllib.parse.urljoin(base_url, href)
 
     def extract_images(self, soup: BeautifulSoup, base_url: str) -> list[str]:
-        images = []
-        for img in soup.select("img"):
-            src = img.get("src") or img.get("data-src") or img.get("data-original")
-            absolute = self.absolute_url(base_url, src)
-            if absolute and absolute not in images:
-                images.append(absolute)
-        return images[:20]
+        # Only a property-specific parser can establish gallery membership.
+        return []
 
     def normalize_from_text(self, url: str, title: str, text: str, images: list[str] | None = None) -> RawProperty | None:
         state = infer_state(title, text, url)
         if state not in TARGET_STATES:
             return None
 
-        money_values = re.findall(r"R\$\s*[\d\.\,]+", text)
-        appraisal = parse_money(money_values[0]) if money_values else None
-        minimum = parse_money(money_values[1]) if len(money_values) > 1 else appraisal
-        discount_match = re.search(r"(\d{1,3}(?:,\d+)?)\s*%", text)
-        discount = parse_percent(discount_match.group(1)) if discount_match else calculate_discount(appraisal, minimum)
+        from ..services.parsing import labeled_money
+        appraisal = labeled_money(text, r"Valor (?:de )?Avalia[çc][aã]o")
+        minimum = labeled_money(text, r"Valor (?:de )?Venda|Lance (?:inicial|m[ií]nimo)|Pre[çc]o")
+        if not minimum:
+            return None
+        discount = calculate_discount(appraisal, minimum)
         debt_status, debt_value, debt_source = infer_debts(text)
 
         city = self._infer_city(title, text, state)
@@ -168,7 +164,10 @@ class BaseConnector(ABC):
             href = self.absolute_url(base_url, anchor.get("href"))
             label = normalize_text(anchor.get_text(" ")) or ""
             joined = f"{href or ''} {label}".lower()
-            if href and any(keyword.lower() in joined for keyword in keywords) and href not in links:
+            from ..services.quality import safe_url
+            path = urllib.parse.urlparse(href or "").path.lower()
+            is_detail = bool(re.search(r"(?:/imoveis?/|/lotes?/|/item/|/previewlote/).+\d|detalhe-imovel", path))
+            if safe_url(href) and is_detail and any(keyword.lower() in joined for keyword in keywords) and href not in links:
                 links.append(href)
         return links[:100]
 
@@ -179,11 +178,8 @@ class BaseConnector(ABC):
         for url in links[:40]:
             try:
                 detail = self.get_soup(url)
-                title = normalize_text(detail.title.get_text(" ")) if detail.title else url
-                text = normalize_text(detail.get_text(" ")) or ""
-                raw = self.normalize_from_text(url, title or url, text, self.extract_images(detail, url))
-                if raw:
-                    items.append(raw.as_dict())
+                from ..services.parsing import parse_html
+                items.extend(parse_html(str(detail), url))
             except Exception as exc:
                 logger.warning("detail_fetch_failed source=%s url=%s error=%s", self.source, url, exc)
         return items

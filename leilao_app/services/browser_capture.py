@@ -33,7 +33,6 @@ def capture_url_to_inbox(url: str, wait_seconds: int = 60, headless: bool = Fals
         options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1440,1200")
-    options.add_argument("--disable-blink-features=AutomationControlled")
 
     driver = webdriver.Chrome(options=options)
     try:
@@ -42,13 +41,23 @@ def capture_url_to_inbox(url: str, wait_seconds: int = 60, headless: bool = Fals
             WebDriverWait(driver, wait_seconds).until(
                 lambda browser: "Imóveis Encontrados" in browser.page_source
                 or "imóveis em leilão" in browser.page_source.lower()
+                or bool(browser.find_elements(By.CSS_SELECTOR, "a[href*='/imovel/'], a[href*='/lote/'], a[href*='/lotes/'], a[href*='/item/'], a[href*='/evento/']"))
+                or "não temos leilões ativos" in browser.page_source.lower()
+                or "não encontramos oportunidades" in browser.page_source.lower()
                 or "Enable JavaScript and cookies" not in browser.page_source
             )
         except Exception:
             pass
         time.sleep(4)
         path = INBOX_DIR / f"{_safe_name(url)}.html"
-        path.write_text(driver.page_source, encoding="utf-8")
+        from .parsing import check_page
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(driver.page_source, "lxml")
+        check_page(soup.get_text(" ", strip=True))
+        if not soup.select_one('link[rel="canonical"]') and soup.head:
+            tag = soup.new_tag("link", rel="canonical", href=driver.current_url)
+            soup.head.append(tag)
+        path.write_text(str(soup), encoding="utf-8")
         return path
     finally:
         driver.quit()
