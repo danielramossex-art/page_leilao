@@ -11,12 +11,9 @@ from ..utils import calculate_discount, infer_debts, infer_modality, make_finger
 from .collector import upsert_property
 
 
-DEFAULT_URLS = [
-    "https://www.leilaoimovel.com.br/leilao-de-imoveis/sp",
-    "https://www.leilaoimovel.com.br/leilao-de-imoveis/mg",
-    "https://www.leilaoimovel.com.br/leilao-de-imoveis/pr",
-    "https://www.leilaoimovel.com.br/leilao-de-imoveis/sc",
-]
+from ..geography import TARGET_STATES
+
+DEFAULT_URLS = [f"https://www.leilaoimovel.com.br/leilao-de-imoveis/{uf.lower()}" for uf in TARGET_STATES]
 
 
 def _env(name: str, default: str | None = None) -> str | None:

@@ -163,13 +163,15 @@ def initialize_filters():
     st.session_state["applied"] = {**advanced, "state": params.get("state", "Todos"), "city": params.get("city", "Todas"),
                                    "kind": params.get("kind", "Todos"), "max_price": max(0, parse_money(params.get("max_price")) or 0)}
 
+from leilao_app.geography import TARGET_STATES
+
 def render_search(items):
     st.title("Encontre oportunidades em imóveis")
-    st.write("Busque por localização, compare os dados e confira as condições na fonte oficial.")
+    st.write("Encontre imóveis em todo o Brasil, nas capitais e no interior. Compare os dados e confira as condições na fonte oficial.")
     applied = st.session_state.get("applied", {})
     with st.container(border=True):
         columns = st.columns([1, 1.4, 1.2, 1.2])
-        states = ["Todos", "SP", "MG", "PR", "SC"] + sorted({i["state"] for i in items if i.get("state")} - {"SP", "MG", "PR", "SC"})
+        states = ["Todos", *TARGET_STATES]
         with columns[0]:
             state = st.selectbox("Estado", states, index=states.index(applied.get("state")) if applied.get("state") in states else 0, key="state_input")
         cities = ["Todas"] + sorted({i["city"] for i in items if i.get("city") and (state == "Todos" or i["state"] == state)})

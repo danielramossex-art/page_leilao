@@ -4,7 +4,7 @@ Revisão: 08/09/2026.
 
 | Fonte | Caminho mantido | Validação nesta revisão |
 |---|---|---|
-| CAIXA | CSV oficial e importação de campos nomeados | Lista SP respondeu 200 inicialmente, geração 04/09; consultas seguintes receberam bloqueio. Parser coberto por testes; sem alegar coleta completa. |
+| CAIXA | CSV oficial e importação de campos nomeados | Lista nacional Geral respondeu HTTP 200 em 08/09/2026 com 25.050 registros nas 27 UFs. CSV sem fotos; detalhes continuam sujeitos à disponibilidade e a bloqueios da fonte. |
 | Mega Leilões | HTML de listagem e detalhe / CSV | 5 ofertas reais em Jundiaí, 3 detalhes comparados, fotos vinculadas ao lote e carregadas no navegador. |
 | Santander | Conector/catálogo, CSV, JSON-LD compatível | Automação externa não validada. |
 | Bradesco | Catálogo, CSV, JSON-LD compatível | Automação externa não validada. |

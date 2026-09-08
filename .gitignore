@@ -13,3 +13,8 @@ data/processed/
 data/failed/
 data/backups/
 data/validation/
+
+# Arquivos temporários de transação do SQLite
+*.db-journal
+*.db-wal
+*.db-shm

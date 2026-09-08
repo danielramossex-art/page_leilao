@@ -75,3 +75,9 @@ O teste de navegador exige servidor em 8512, Chrome e a base de validação de J
 Docker permanece opcional (docker compose up --build); imagens não incluem .env, banco ou capturas. O build Docker não substitui a compilação e os testes Python e não foi executado na revisão.
 
 Consulte [diagnóstico inicial](docs/REVISAO_INICIAL.md), [fontes e limitações](docs/SOURCES.md) e [relatório final](docs/REVISAO_FINAL.md).
+
+## Cobertura nacional
+
+A busca aceita as 27 UFs (26 estados e DF), capitais e cidades do interior presentes na base. O conector CAIXA usa a lista oficial nacional. A disponibilidade depende das ofertas publicadas, sem fabricar resultados para preencher regiões.
+
+Para atualizar: `python -m leilao_app.cli collect --source caixa`. Para importar uma lista nacional já baixada: `python scripts/import_national.py caminho/lista.csv`. A lista CSV não contém fotos; nesses registros aparece o placeholder até haver imagem oficial vinculada.

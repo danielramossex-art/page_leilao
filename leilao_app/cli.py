@@ -20,7 +20,7 @@ def main() -> None:
     parser.add_argument("--url", action="append", help="URL de cidade/fonte para coleta Apify ou captura por navegador")
     parser.add_argument("--max-items", type=int, help="Maximo de itens na coleta Apify")
     parser.add_argument("--headless", action="store_true", help="Executa navegador em modo invisivel quando possivel")
-    parser.add_argument("--state", action="append", help="Filtra captura por estado: SP, MG, PR ou SC")
+    parser.add_argument("--state", action="append", help="Filtra captura por estado: qualquer UF brasileira, incluindo DF")
     parser.add_argument("--category", action="append", help="Filtra captura por categoria: banco, agregador, leiloeiro ou cidade")
     args = parser.parse_args()
 

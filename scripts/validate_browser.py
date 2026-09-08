@@ -35,7 +35,7 @@ with webdriver.Chrome(options=options) as browser:
             finally:
                 browser.switch_to.default_content()
         return count
-    browser.get("http://localhost:8512")
+    browser.get("http://localhost:8512/?source=Mega%20Leil%C3%B5es")
     until_text("Encontre oportunidades em imóveis")
     assert not browser.find_elements(By.CSS_SELECTOR, "[data-testid='stException']"), text()
     browser.save_screenshot(str(root / "home_desktop.png"))
@@ -88,7 +88,7 @@ with webdriver.Chrome(options=options) as browser:
     until_text("Análise Seach page Leilão")
     browser.save_screenshot(str(root / "detail_mobile.png"))
     assert not browser.execute_script("return document.documentElement.scrollWidth>window.innerWidth"), "Horizontal overflow on detail"
-    browser.get("http://localhost:8512/?state=SP&city=Jundia%C3%AD&busca=1")
+    browser.get("http://localhost:8512/?state=SP&city=Jundia%C3%AD&source=Mega%20Leil%C3%B5es&busca=1")
     until_text("5 imóveis encontrados")
     browser.save_screenshot(str(root / "results_mobile.png"))
     frame = browser.find_element(By.CSS_SELECTOR, "iframe[srcdoc]")

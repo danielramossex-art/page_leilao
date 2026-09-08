@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-TARGET_STATES = ("SP", "MG", "PR", "SC")
+from .geography import TARGET_STATES
 
 
 @dataclass(frozen=True)
@@ -66,6 +66,13 @@ SOURCE_CATALOG: tuple[SourcePage, ...] = (
     SourcePage("Sodre Santoro", "https://www.sodresantoro.com.br/leiloes/imoveis", "leiloeiro", ("SP",)),
     SourcePage("Milan Leiloes", "https://www.milanleiloes.com.br/", "leiloeiro", ("SP",)),
     SourcePage("Lance no Leilao", "https://www.lancenoleilao.com.br/", "leiloeiro"),
+)
+
+
+# Entradas estaduais oficiais para cobertura nacional.
+SOURCE_CATALOG += tuple(
+    SourcePage(f"Mega Leiloes {uf}", f"https://www.megaleiloes.com.br/imoveis/{uf.lower()}", "leiloeiro", (uf,), "html_parser")
+    for uf in TARGET_STATES
 )
 
 

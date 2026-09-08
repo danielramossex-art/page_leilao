@@ -1,9 +1,4 @@
-fix: simplifica busca e valida dados de imóveis no Seach page Leilão
+fix: amplia busca e coleta para todo o Brasil
 
-Concentra a interface existente em busca, cards, detalhes e favoritos.
-Corrige preço/avaliação, desconto, fotos vinculadas ao imóvel, score
-anulável, atualização e importação; preserva banco e históricos com backup.
-
-Validação: 16 testes de regressão, compilação Python e navegador em
-desktop/375 px; cinco ofertas reais de Jundiaí, três detalhes comparados
-com a Mega Leilões. Documenta bloqueios e fontes ainda não validadas.
+Inclui as 27 UFs, normalização das capitais e coleta nacional CAIXA.
+Valida 25.050 registros oficiais, 18 testes e buscas nas cinco regiões.

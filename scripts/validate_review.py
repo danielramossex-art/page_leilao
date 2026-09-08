@@ -40,7 +40,7 @@ if args.import_verified_captures:
     for row in rows:
         with session_scope() as session:
             assert upsert_property(session, row)
-    results = filter_properties(load_catalog(), {"state": "SP", "city": "Jundiaí"})
+    results = filter_properties(load_catalog(), {"state": "SP", "city": "Jundiaí", "source": "Mega Leilões"})
     assert len(results) == 5
     print("Search SP/Jundiaí:", len(results))
 (root / "source_comparison.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")

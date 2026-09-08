@@ -192,7 +192,7 @@ class BaseConnector(ABC):
         return None
 
     def _infer_city(self, title: str, text: str, state: str | None) -> str | None:
-        match = re.search(r"([A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÀ-ÿ\s\.\-]+)\s*/\s*(SP|MG|PR|SC)", f"{title} {text}")
+        match = re.search(r"([A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÀ-ÿ\s\.\-]+)\s*/\s*(AC|AL|AM|AP|BA|CE|DF|ES|GO|MA|MG|MS|MT|PA|PB|PE|PI|PR|RJ|RN|RO|RR|RS|SC|SE|SP|TO)", f"{title} {text}")
         if match:
             return normalize_text(match.group(1))
         return self._infer_after_label(text, ["Cidade", "Município", "Municipio"])

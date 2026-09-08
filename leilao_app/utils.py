@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 
 
-TARGET_STATES = {"SP", "MG", "PR", "SC"}
+from .geography import TARGET_STATES, STATES
 
 
 def only_digits(value: str | None) -> str | None:
@@ -98,12 +98,7 @@ def infer_state(*parts: str | None) -> str | None:
     for state in TARGET_STATES:
         if re.search(rf"\b{state}\b", text):
             return state
-    state_names = {
-        "SAO PAULO": "SP",
-        "MINAS GERAIS": "MG",
-        "PARANA": "PR",
-        "SANTA CATARINA": "SC",
-    }
+    state_names = {strip_accents(name).upper(): uf for uf, (name, _) in STATES.items()}
     plain = strip_accents(text)
     for name, uf in state_names.items():
         if name in plain:

@@ -27,12 +27,16 @@ def city_name(value) -> str | None:
     if not isinstance(value, str):
         return None
     name = normalize_city_name(value)
-    return "Jundiaí" if normalized_key(name) == "jundiai" else name
+    from ..geography import STATES
+    names = {normalized_key(capital): capital for _, capital in STATES.values()}
+    names["jundiai"] = "Jundiaí"
+    return names.get(normalized_key(name), name)
 
 def state_name(value) -> str | None:
     plain = normalized_key(value)
     states = {"ac", "al", "ap", "am", "ba", "ce", "df", "es", "go", "ma", "mt", "ms", "mg", "pa", "pb", "pr", "pe", "pi", "rj", "rn", "rs", "ro", "rr", "sc", "sp", "se", "to"}
-    names = {"sao paulo": "SP", "minas gerais": "MG", "parana": "PR", "santa catarina": "SC"}
+    from ..geography import STATES
+    names = {normalized_key(name): uf for uf, (name, _) in STATES.items()}
     return plain.upper() if plain in states else names.get(plain)
 
 def positive_number(value) -> float | None:
